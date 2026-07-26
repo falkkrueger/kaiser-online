@@ -252,11 +252,9 @@ function showLogin(){
   printCenter(4,'KAISER','yellow','black');
   printCenter(6,'(C) 1984 ARIOLASOFT','light-red','black');
   printCenter(10,'ONLINE MULTIPLAYER','cyan','black');
-  printCenter(14,'NEUES SPIEL = N','white','black');
-  printCenter(16,'SPIEL BEITRETEN = B','white','black');
-  printCenter(20,'WAHLE N ODER B','yellow','black');
+  printCenter(20,'TAPPE EINE OPTION','yellow','black');
   
-  navEl.innerHTML = '<button onclick="void(0)" id="btnNew">NEUES SPIEL</button><button onclick="void(0)" id="btnJoin">BEITRETEN</button>';
+  navEl.innerHTML = '<button id="btnNew" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">NEUES SPIEL</button><button id="btnJoin" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">BEITRETEN</button>';
   document.getElementById('btnNew').addEventListener('click', startNewGame);
   document.getElementById('btnJoin').addEventListener('click', joinGame);
 }
