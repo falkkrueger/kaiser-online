@@ -17,6 +17,7 @@ import uvicorn
 
 from engine import KaiserEngine, SpielPhase, STAATEN, TITEL
 from notifications import get_notification_service, init_notification_service
+from fastapi.middleware.cors import CORSMiddleware
 
 # === Speicher ===
 # In Produktion: SQLite/PostgreSQL. Für Prototyp: In-Memory.
@@ -35,6 +36,15 @@ FALK_CHAT_ID = "1062835848"
 KAISER_BASE_URL = os.environ.get("KAISER_BASE_URL", "http://192.168.5.149:8080")
 
 app = FastAPI(title="Kaiser Online", version="0.1.0")
+
+# CORS erlauben (Frontend auf GitHub Pages, Backend woanders)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # === Modelle ===
 
