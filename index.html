@@ -134,9 +134,9 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 // === Configuration ===
 // Backend URL - auto-detect or use environment
 var API = '';
-// If running on GitHub Pages, use the Render.com backend
+// If running on GitHub Pages or locally, use the Cloudflare Tunnel backend
 if (location.hostname === 'falkkrueger.github.io' || location.protocol === 'file:') {
-  API = window.KAISER_API_URL || 'https://kaiser-online.onrender.com';
+  API = window.KAISER_API_URL || 'https://ultimately-board-alto-journalists.trycloudflare.com';
 }
 var COLS=40, ROWS=25;
 var grid=document.getElementById('grid');
