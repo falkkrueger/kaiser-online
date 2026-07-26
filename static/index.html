@@ -132,7 +132,15 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 'use strict';
 
 // === Configuration ===
-var API = ''; // Same origin as this page
+// Backend URL - change this to your backend host
+// Local: http://localhost:8080
+// LAN: http://192.168.5.149:8080
+// For production: set KAISER_API_URL in environment
+var API = window.KAISER_API_URL || (location.protocol === 'file:' ? 'http://192.168.5.149:8080' : '');
+// If running on GitHub Pages, use the configured backend
+if (location.hostname === 'falkkrueger.github.io') {
+  API = 'http://192.168.5.149:8080'; // Falk's Kaiser Server
+}
 var COLS=40, ROWS=25;
 var grid=document.getElementById('grid');
 var infoEl=document.getElementById('info');
