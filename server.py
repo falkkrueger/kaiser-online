@@ -46,6 +46,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Static files (c64renderer.js etc.) - mount at root so relative paths work
+from fastapi.staticfiles import StaticFiles
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+# Serve static files at root level (but don't shadow API routes)
+@app.get("/c64renderer.js")
+async def serve_renderer():
+    path = os.path.join(static_dir, "c64renderer.js")
+    if os.path.exists(path):
+        from fastapi.responses import FileResponse
+        return FileResponse(path, media_type="application/javascript")
+    raise HTTPException(404)
+
 # === Modelle ===
 
 class SpielErstellen(BaseModel):
