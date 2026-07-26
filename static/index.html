@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>KAISER Online</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="c64renderer.js"></script>
 <style>
 :root{
-  --c64-black:#000;--c64-white:#fff;--c64-red:#883338;--c64-cyan:#75CEC8;
+  --c64-black:#000;--c64-white:#fff;--c64-red:#813338;--c64-cyan:#75CEC8;
   --c64-purple:#8E3C97;--c64-green:#56AC4D;--c64-blue:#2E2C9B;
   --c64-yellow:#EDF171;--c64-orange:#8E4229;--c64-brown:#553800;
   --c64-light-red:#C46C71;--c64-dark-grey:#4A4A4A;--c64-grey:#808080;
@@ -19,63 +20,44 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 
 .c64-border{
   background:var(--c64-light-blue);
-  padding:3vmin;border-radius:4px;flex-shrink:1;
+  padding:2vmin;border-radius:4px;flex-shrink:1;
   display:flex;flex-direction:column;
   max-width:100vw;max-height:100vh;
 }
-.c64-screen{
-  background:var(--c64-blue);position:relative;overflow:hidden;
-  image-rendering:pixelated;
-  width:min(96vw,calc((90vh - 80px) * 1.6));
-  aspect-ratio:40/25;
-  display:flex;flex-direction:column;
+/* Canvas fills available space, keeps 320:200 = 1.6:1 aspect ratio */
+.c64-canvas-wrap{
+  position:relative;
+  width:min(96vw,calc((88vh - 80px) * 1.6));
+  aspect-ratio:320/200;
+}
+#c64canvas{
+  width:100%;height:100%;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  display:block;
   cursor:pointer;
 }
-.c64-grid{
-  display:grid;grid-template-columns:repeat(40,1fr);grid-template-rows:repeat(25,1fr);
-  width:100%;height:100%;flex:1;
-}
-.c64-char{
-  display:flex;align-items:center;justify-content:center;
-  font-size:calc(min(2.2vw,1.7vh));line-height:1;
-  color:var(--c64-light-blue);background:var(--c64-blue);
-  user-select:none;-webkit-user-select:none;
-  font-family:'Press Start 2P',monospace;white-space:nowrap;overflow:hidden;
-}
-.bg-black{background:#000!important}.bg-white{background:#fff!important}
-.bg-red{background:#883338!important}.bg-cyan{background:#75CEC8!important}
-.bg-purple{background:#8E3C97!important}.bg-green{background:#56AC4D!important}
-.bg-blue{background:#2E2C9B!important}.bg-yellow{background:#EDF171!important}
-.bg-orange{background:#8E4229!important}.bg-brown{background:#553800!important}
-.bg-light-red{background:#C46C71!important}.bg-dark-grey{background:#4A4A4A!important}
-.bg-grey{background:#808080!important}.bg-light-green{background:#AAD652!important}
-.bg-light-blue{background:#6C7EEB!important}.bg-light-grey{background:#D0D0D0!important}
-.fg-black{color:#000!important}.fg-white{color:#fff!important}
-.fg-red{color:#883338!important}.fg-cyan{color:#75CEC8!important}
-.fg-purple{color:#8E3C97!important}.fg-green{color:#56AC4D!important}
-.fg-blue{color:#2E2C9B!important}.fg-yellow{color:#EDF171!important}
-.fg-orange{color:#8E4229!important}.fg-brown{color:#553800!important}
-.fg-light-red{color:#C46C71!important}.fg-dark-grey{color:#4A4A4A!important}
-.fg-grey{color:#808080!important}.fg-light-green{color:#AAD652!important}
-.fg-light-blue{color:#6C7EEB!important}.fg-light-grey{color:#D0D0D0!important}
 
 .c64-info{color:var(--c64-light-grey);font-size:calc(min(1.0vw,0.9vh));
   text-align:center;margin-top:6px;font-family:'Press Start 2P',monospace;padding:4px}
 
-/* Modal overlay for input */
 .c64-modal{
   position:absolute;top:0;left:0;width:100%;height:100%;
-  background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;
   z-index:10;
 }
 .c64-modal-inner{
   background:var(--c64-blue);border:2px solid var(--c64-light-blue);
-  padding:20px;border-radius:4px;max-width:90%;
+  padding:16px;border-radius:4px;max-width:90%;max-height:90%;overflow:auto;
 }
 .c64-modal-inner input{
   font-family:'Press Start 2P',monospace;font-size:12px;
   padding:8px;margin:8px 0;width:100%;background:#000;color:var(--c64-light-green);
   border:1px solid var(--c64-light-blue);text-transform:uppercase;letter-spacing:2px;
+}
+.c64-modal-inner select{
+  font-family:'Press Start 2P',monospace;font-size:10px;
+  padding:6px;width:100%;background:#000;color:var(--c64-light-green);
+  border:1px solid var(--c64-light-blue);
 }
 .c64-modal-inner button{
   font-family:'Press Start 2P',monospace;font-size:10px;
@@ -87,10 +69,7 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .c64-modal-title{color:var(--c64-yellow);font-size:10px;margin-bottom:10px;text-align:center}
 .c64-modal-label{color:var(--c64-cyan);font-size:8px;margin-top:8px}
 
-/* Number input pad */
-.c64-keypad{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0;
-}
+.c64-keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:8px 0}
 .c64-keypad button{
   font-family:'Press Start 2P',monospace;font-size:10px;
   background:var(--c64-dark-grey);color:var(--c64-light-green);
@@ -100,30 +79,27 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .c64-keypad button:active{background:var(--c64-light-blue);color:var(--c64-blue)}
 .c64-keypad-wide{grid-column:span 2}
 
-.c64-nav{display:flex;gap:8px;justify-content:center;margin-top:6px}
+.c64-nav{display:flex;gap:6px;justify-content:center;margin-top:6px;flex-wrap:wrap}
 .c64-nav button{
-  font-family:'Press Start 2P',monospace;font-size:calc(min(1.2vw,1vh));
+  font-family:'Press Start 2P',monospace;font-size:calc(min(1.1vw,0.9vh));
   background:var(--c64-light-blue);color:var(--c64-blue);border:none;
-  padding:8px 16px;border-radius:4px;cursor:pointer;
+  padding:8px 12px;border-radius:4px;cursor:pointer;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
 .c64-nav button:active{background:var(--c64-white)}
 .c64-nav button:disabled{background:var(--c64-dark-grey);color:var(--c64-grey)}
-
-@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
-.c64-cursor{animation:blink 1s steps(1) infinite}
 </style>
 </head>
 <body>
 
 <div class="c64-border">
-  <div class="c64-screen" id="screen">
-    <div class="c64-grid" id="grid"></div>
-    <div class="c64-modal" id="modal" style="display:none">
+  <div class="c64-canvas-wrap">
+    <canvas id="c64canvas"></canvas>
+    <div class="c64-modal" id="modal">
       <div class="c64-modal-inner" id="modalContent"></div>
     </div>
   </div>
-  <div class="c64-info" id="info">KAISER ONLINE - VERBINDEN...</div>
+  <div class="c64-info" id="info">KAISER ONLINE</div>
   <div class="c64-nav" id="nav"></div>
 </div>
 
@@ -131,96 +107,104 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 (function(){
 'use strict';
 
-// === Configuration ===
-// Backend URL - auto-detect or use environment
+// === Config ===
 var API = '';
-// If running on GitHub Pages or locally, use the Cloudflare Tunnel backend
 if (location.hostname === 'falkkrueger.github.io' || location.protocol === 'file:') {
   API = window.KAISER_API_URL || 'https://star-inclusive-reviews-housing.trycloudflare.com';
 }
-var COLS=40, ROWS=25;
-var grid=document.getElementById('grid');
-var infoEl=document.getElementById('info');
-var navEl=document.getElementById('nav');
-var modalEl=document.getElementById('modal');
-var modalContent=document.getElementById('modalContent');
-var screenEl=document.getElementById('screen');
 
 // === State ===
-var cells=[];
 var state = {
-  spiel_id: null,
-  spiel_code: null,
-  mein_name: null,
-  spielstand: null,
-  ws: null,
-  phase: 'login', // login, lobby, playing, waiting
-  bildStep: 0,
-  isHost: false,
-  modalCallback: null,
-  eingabe_wert: '',
-  eingabe_max: 999999,
+  spiel_id:null, spiel_code:null, mein_name:null, spielstand:null,
+  ws:null, phase:'login', bildStep:0, isHost:false,
+  eingabe_wert:'', eingabe_max:999999,
 };
-
-// === Auto-join from URL ?code= ===
 var urlParams = new URLSearchParams(location.search);
 var preCode = urlParams.get('code');
-if(preCode){
-  state.preFillCode = preCode.toUpperCase();
-}
+if(preCode) state.preFillCode = preCode.toUpperCase();
 
-// === Build grid ===
-for(var r=0;r<ROWS;r++){
-  cells[r]=[];
-  for(var c=0;c<COLS;c++){
-    var el=document.createElement('div');
-    el.className='c64-char fg-light-blue bg-blue';
-    el.textContent=' ';
-    grid.appendChild(el);
-    cells[r][c]=el;
+// === C64 Renderer ===
+var canvas = document.getElementById('c64canvas');
+var renderer = new C64Renderer(canvas);
+var infoEl = document.getElementById('info');
+var navEl = document.getElementById('nav');
+var modalEl = document.getElementById('modal');
+var modalContent = document.getElementById('modalContent');
+
+// === Screen helpers (using C64Renderer) ===
+var C = C64_PALETTE; // color palette array
+// Color indices: 0=black 1=white 2=red 3=cyan 4=purple 5=green 6=blue 7=yellow
+// 8=orange 9=brown 10=light-red 11=dark-grey 12=grey 13=light-green 14=light-blue 15=light-grey
+
+function clr(bg){
+  renderer.regs.bg = bg !== undefined ? bg : 6;
+  renderer.clear(32, bg !== undefined ? bg : 6);
+}
+function poke(col,row,ch,color){
+  // ch = screen code (0-255) or PETSCII char
+  if(typeof ch === 'string') ch = petToScreen(ch.charCodeAt(0));
+  renderer.poke(col, row, ch, color);
+}
+function petToScreen(c){
+  if(c>=65 && c<=90) return c-64; // A-Z -> 1-26
+  if(c>=48 && c<=57) return c+48; // 0-9 -> 48-57... actually C64 screen codes: 0=48,1=49...
+  if(c===32) return 32;
+  if(c===46) return 46; // .
+  if(c===33) return 33; // !
+  if(c===58) return 58; // :
+  if(c===45) return 45; // -
+  if(c===43) return 43; // +
+  if(c===35) return 35; // #
+  if(c===36) return 36; // $
+  if(c===37) return 37; // %
+  if(c===38) return 38; // &
+  if(c===39) return 39; // '
+  if(c===40) return 40; // (
+  if(c===41) return 41; // )
+  if(c===42) return 42; // *
+  if(c===47) return 47; // /
+  if(c===60) return 60; // <
+  if(c===61) return 61; // =
+  if(c===62) return 62; // >
+  if(c===63) return 63; // ?
+  if(c===91) return 91; // [
+  if(c===93) return 93; // ]
+  if(c===94) return 94; // ^
+  if(c>=97 && c<=122) return c-96; // a-z -> 1-26 (same as A-Z in uppercase mode)
+  if(c===228) return 91; // ä -> [ position (C64 maps ä to screen code 91)
+  if(c===246) return 93; // ö
+  if(c===252) return 94; // ü
+  if(c===223) return 95; // ß
+  return c;
+}
+function print(col,row,text,color){
+  for(var i=0;i<text.length && col+i<40;i++){
+    poke(col+i,row,text[i],color);
   }
 }
-
-// === Screen rendering helpers ===
-function poke(col,row,ch,fg,bg){
-  if(col<0||col>=COLS||row<0||row>=ROWS)return;
-  fg=fg||'light-blue';bg=bg||'blue';
-  var el=cells[row][col];
-  el.textContent=ch;el.className='c64-char fg-'+fg+' bg-'+bg;
+function printCenter(row,text,color){
+  var col=Math.floor((40-text.length)/2);
+  if(col<0)col=0;
+  print(col,row,text,color);
 }
-function print(col,row,text,fg,bg){
-  for(var i=0;i<text.length&&col+i<COLS;i++)poke(col+i,row,text[i],fg,bg);
+function hLine(col,row,len,color){
+  for(var i=0;i<len && col+i<40;i++) poke(col+i,row,32,color);
 }
-function printCenter(row,text,fg,bg){
-  var col=Math.floor((COLS-text.length)/2);if(col<0)col=0;
-  print(col,row,text,fg,bg);
+function fillRect(col,row,w,h,color){
+  for(var r=row;r<row+h && r<25;r++)
+    for(var c=col;c<col+w && c<40;c++)
+      poke(c,r,32,color);
 }
-function clearScreen(bg){
-  bg=bg||'blue';
-  for(var r=0;r<ROWS;r++)for(var c=0;c<COLS;c++)poke(c,r,' ','light-blue',bg);
-}
-function hLine(col,row,len,ch,fg,bg){ch=ch||'-';
-  for(var i=0;i<len&&col+i<COLS;i++)poke(col+i,row,ch,fg,bg);}
-function box(col,row,w,h,fg,bg){fg=fg||'light-blue';bg=bg||'blue';
-  hLine(col,row,w,'-',fg,bg);hLine(col,row+h-1,w,'-',fg,bg);
-  for(var r=row+1;r<row+h-1;r++){poke(col,r,'|',fg,bg);poke(col+w-1,r,'|',fg,bg);}
-  poke(col,row,'+',fg,bg);poke(col+w-1,row,'+',fg,bg);
-  poke(col,row+h-1,'+',fg,bg);poke(col+w-1,row+h-1,'+',fg,bg);}
-function fillRect(col,row,w,h,ch,fg,bg){ch=ch||' ';
-  for(var r=row;r<row+h&&r<ROWS;r++)for(var c=col;c<col+w&&c<COLS;c++)poke(c,r,ch,fg,bg);}
-
 function fmtNum(n){
   return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 }
 
-// === Modal helpers ===
-function showModal(html){
-  modalContent.innerHTML = html;
-  modalEl.style.display = 'flex';
-}
-function hideModal(){ modalEl.style.display = 'none'; }
+function showModal(html){ modalContent.innerHTML=html; modalEl.style.display='flex'; }
+function hideModal(){ modalEl.style.display='none'; }
 
-// === API calls ===
+function renderScreen(){ renderer.render(); }
+
+// === API ===
 function apiCall(path, method, body){
   method = method || 'GET';
   var opts = {method:method, headers:{'Content-Type':'application/json'}};
@@ -228,88 +212,114 @@ function apiCall(path, method, body){
   return fetch(API+path, opts).then(function(r){return r.json()});
 }
 
-// === WebSocket ===
 function connectWS(){
   if(state.ws){ try{state.ws.close();}catch(e){} }
   try {
     var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     state.ws = new WebSocket(proto+'//'+location.host+'/ws/'+state.spiel_id);
     state.ws.onmessage = function(ev){
-      try {
-        var msg = JSON.parse(ev.data);
-        if(msg.type === 'spielstand'){
-          state.spielstand = msg.data;
-          render();
-        }
+      try { var msg=JSON.parse(ev.data);
+        if(msg.type==='spielstand'){ state.spielstand=msg.data; render(); }
       } catch(e){}
     };
-    state.ws.onclose = function(){
-      // Silent - don't break the UI if WS fails
-    };
-    state.ws.onerror = function(){
-      // Silent - UI still works via REST
-    };
-  } catch(e){
-    // WS not available - UI works via REST only
-  }
+    state.ws.onclose=function(){}; state.ws.onerror=function(){};
+  } catch(e){}
 }
 
-// === Login Screen ===
+function doAktion(aktion, parameter){
+  return apiCall('/api/spiel/'+state.spiel_id+'/aktion','POST',{aktion:aktion, parameter:parameter||{}})
+    .then(function(res){
+      return apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
+        state.spielstand=stand; return res;
+      }).catch(function(){ return res; });
+    });
+}
+
+// === Number input ===
+function numberInput(title, max, callback){
+  state.eingabe_wert=''; state.eingabe_max=max||999999;
+  showModal(
+    '<div class="c64-modal-title">'+title+'</div>'+
+    '<div style="text-align:center;font-size:16px;color:var(--c64-light-green);margin:10px 0" id="numDisplay">0</div>'+
+    '<div class="c64-keypad">'+
+    '<button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button><button data-d="C">C</button><button data-d="back">&lt;</button>'+
+    '<button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button><button data-d="0">0</button><button data-d="ok" class="c64-keypad-wide" style="grid-row:span 2">OK</button>'+
+    '<button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button><button data-d="00">00</button>'+
+    '</div>'
+  );
+  var disp=document.getElementById('numDisplay');
+  modalContent.querySelectorAll('.c64-keypad button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var d=this.getAttribute('data-d');
+      if(d==='C'){state.eingabe_wert='';}
+      else if(d==='back'){state.eingabe_wert=state.eingabe_wert.slice(0,-1);}
+      else if(d==='ok'){var v=parseInt(state.eingabe_wert||'0');hideModal();callback(v);return;}
+      else{var n=state.eingabe_wert+d;if(parseInt(n)<=state.eingabe_max)state.eingabe_wert=n;}
+      disp.textContent=fmtNum(parseInt(state.eingabe_wert||'0'));
+    });
+  });
+}
+
+function menuSelect(title, items, callback){
+  var html='<div class="c64-modal-title">'+title+'</div>';
+  items.forEach(function(item,i){
+    html+='<button style="display:block;width:100%;margin:4px 0;font-size:9px" data-idx="'+i+'">'+item.label+'</button>';
+  });
+  html+='<button style="display:block;width:100%;margin:4px 0;font-size:9px" id="menuCancel">ABBRECHEN</button>';
+  showModal(html);
+  modalContent.querySelectorAll('button[data-idx]').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var idx=parseInt(this.getAttribute('data-idx'));
+      hideModal();callback(items[idx]);
+    });
+  });
+  document.getElementById('menuCancel').addEventListener('click',hideModal);
+}
+
+// === LOGIN ===
 function showLogin(){
-  clearScreen('black');
-  printCenter(4,'KAISER','yellow','black');
-  printCenter(6,'(C) 1984 ARIOLASOFT','light-red','black');
-  printCenter(10,'ONLINE MULTIPLAYER','cyan','black');
-  printCenter(20,'TAPPE EINE OPTION','yellow','black');
-  
-  navEl.innerHTML = '<button id="btnNew" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">NEUES SPIEL</button><button id="btnJoin" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL BEITRETEN</button>';
-  document.getElementById('btnNew').addEventListener('click', startNewGame);
-  document.getElementById('btnJoin').addEventListener('click', joinGame);
+  renderer.regs.border = 14; // light blue
+  renderer.regs.bg = 0; // black
+  clr(0);
+  printCenter(4,'KAISER',7);
+  printCenter(6,'(C) 1984 ARIOLASOFT',2);
+  printCenter(10,'ONLINE MULTIPLAYER',3);
+  printCenter(20,'TAPPE EINE OPTION',7);
+  renderScreen();
+  infoEl.textContent='KAISER ONLINE';
+  navEl.innerHTML='<button id="btnNew" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">NEUES SPIEL</button><button id="btnJoin" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL BEITRETEN</button>';
+  document.getElementById('btnNew').addEventListener('click',startNewGame);
+  document.getElementById('btnJoin').addEventListener('click',joinGame);
 }
 
 function startNewGame(){
-  // Nur Ersteller-Daten abfragen
+  var staaten=['Preussen','Bayern','Hessen','Boehmen','Sachsen','Wuerttemberg','Hannover','Pfalz','Braunschweig'];
+  var opts=staaten.map(function(s){return '<option>'+s+'</option>'}).join('');
   showModal(
     '<div class="c64-modal-title">NEUES SPIEL</div>'+
     '<div class="c64-modal-label">DEIN NAME:</div>'+
     '<input type="text" id="inpName" maxlength="10" placeholder="Name" autofocus>'+
-    '<div class="c64-modal-label">GESCHLECHT (M/W):</div>'+
-    '<div style="display:flex;gap:8px">'+
-    '<button id="gM" style="flex:1">M</button><button id="gW" style="flex:1">W</button>'+
-    '</div>'+
+    '<div class="c64-modal-label">GESCHLECHT:</div>'+
+    '<div style="display:flex;gap:8px"><button id="gM" style="flex:1">M</button><button id="gW" style="flex:1">W</button></div>'+
     '<div class="c64-modal-label">STAAT:</div>'+
-    '<select id="inpStaat" style="font-family:monospace;font-size:10px;width:100%;padding:6px">'+
-    '<option>Preussen</option><option>Bayern</option><option>Hessen</option><option>Boehmen</option><option>Sachsen</option><option>Wuerttemberg</option><option>Hannover</option><option>Pfalz</option><option>Braunschweig</option>'+
-    '</select>'+
-    '<div style="text-align:center;margin-top:12px">'+
-    '<button id="btnCreate">SPIEL ERSTELLEN</button>'+
-    '<button id="btnCancel">ABBRECHEN</button>'+
-    '</div>'
+    '<select id="inpStaat">'+opts+'</select>'+
+    '<div style="text-align:center;margin-top:12px"><button id="btnCreate">SPIEL ERSTELLEN</button><button id="btnCancel">ABBRECHEN</button></div>'
   );
-  
-  var geschlecht = 'M';
-  document.getElementById('gM').addEventListener('click', function(){geschlecht='M'; this.style.background='var(--c64-light-blue)'; document.getElementById('gW').style.background='var(--c64-dark-grey)'});
-  document.getElementById('gW').addEventListener('click', function(){geschlecht='W'; this.style.background='var(--c64-light-blue)'; document.getElementById('gM').style.background='var(--c64-dark-grey)'});
-  document.getElementById('gM').style.background = 'var(--c64-light-blue)';
-  
-  document.getElementById('btnCreate').addEventListener('click', function(){
-    var name = document.getElementById('inpName').value.trim();
-    var staat = document.getElementById('inpStaat').value;
-    if(!name){ return; }
-    
-    apiCall('/api/spiel/erstellen','POST',{name:name, geschlecht:geschlecht, staat:staat}).then(function(res){
-      state.spiel_id = res.spiel_id;
-      state.spiel_code = res.spiel_code;
-      state.spielstand = res.spielstand;
-      state.mein_name = name;
-      state.phase = 'lobby';
-      state.isHost = true;
-      hideModal();
-      connectWS();
-      showLobby();
+  var g='M';
+  document.getElementById('gM').addEventListener('click',function(){g='M';this.style.background='var(--c64-light-blue)';document.getElementById('gW').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gW').addEventListener('click',function(){g='W';this.style.background='var(--c64-light-blue)';document.getElementById('gM').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gM').style.background='var(--c64-light-blue)';
+  document.getElementById('btnCreate').addEventListener('click',function(){
+    var name=document.getElementById('inpName').value.trim();
+    var staat=document.getElementById('inpStaat').value;
+    if(!name)return;
+    apiCall('/api/spiel/erstellen','POST',{name:name,geschlecht:g,staat:staat}).then(function(res){
+      state.spiel_id=res.spiel_id;state.spiel_code=res.spiel_code;
+      state.spielstand=res.spielstand;state.mein_name=name;
+      state.phase='lobby';state.isHost=true;hideModal();connectWS();showLobby();
     });
   });
-  document.getElementById('btnCancel').addEventListener('click', hideModal);
+  document.getElementById('btnCancel').addEventListener('click',hideModal);
 }
 
 function joinGame(){
@@ -320,701 +330,428 @@ function joinGame(){
     '<div class="c64-modal-label">DEIN NAME:</div>'+
     '<input type="text" id="inpName" maxlength="10" placeholder="Name">'+
     '<div class="c64-modal-label">GESCHLECHT:</div>'+
-    '<div style="display:flex;gap:8px">'+
-    '<button id="gM2" style="flex:1">M</button><button id="gW2" style="flex:1">W</button>'+
-    '</div>'+
-    '<div style="text-align:center;margin-top:12px">'+
-    '<button id="btnJoin2">BEITRETEN</button>'+
-    '<button id="btnCancel2">ABBRECHEN</button>'+
-    '</div>'
+    '<div style="display:flex;gap:8px"><button id="gM2" style="flex:1">M</button><button id="gW2" style="flex:1">W</button></div>'+
+    '<div style="text-align:center;margin-top:12px"><button id="btnJoin2">BEITRETEN</button><button id="btnCancel2">ABBRECHEN</button></div>'
   );
-  
-  var geschlecht = 'M';
-  document.getElementById('gM2').addEventListener('click', function(){geschlecht='M'; this.style.background='var(--c64-light-blue)'; document.getElementById('gW2').style.background='var(--c64-dark-grey)'});
-  document.getElementById('gW2').addEventListener('click', function(){geschlecht='W'; this.style.background='var(--c64-light-blue)'; document.getElementById('gM2').style.background='var(--c64-dark-grey)'});
-  document.getElementById('gM2').style.background = 'var(--c64-light-blue)';
-  
-  document.getElementById('btnJoin2').addEventListener('click', function(){
-    var code = document.getElementById('inpCode').value.toUpperCase();
-    var name = document.getElementById('inpName').value.trim();
-    if(!code || code.length < 6 || !name){ return; }
-    
+  var g='M';
+  document.getElementById('gM2').addEventListener('click',function(){g='M';this.style.background='var(--c64-light-blue)';document.getElementById('gW2').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gW2').addEventListener('click',function(){g='W';this.style.background='var(--c64-light-blue)';document.getElementById('gM2').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gM2').style.background='var(--c64-light-blue)';
+  document.getElementById('btnJoin2').addEventListener('click',function(){
+    var code=document.getElementById('inpCode').value.toUpperCase();
+    var name=document.getElementById('inpName').value.trim();
+    if(!code||code.length<6||!name)return;
     apiCall('/api/spiel/code/'+code).then(function(res){
-      var sid = res.spiel_id;
-      return apiCall('/api/spiel/'+sid+'/beitreten','POST',{name:name, geschlecht:geschlecht}).then(function(r){
-        state.spiel_id = sid;
-        state.spiel_code = code;
-        state.spielstand = r.spielstand;
-        state.mein_name = name;
-        state.isHost = false;
-        hideModal();
-        connectWS();
-        // Wenn Spiel schon läuft -> direkt ins Spiel, sonst Lobby
-        if(r.spielstand.phase === 'setup' || r.spielstand.phase === 'lobby'){
-          state.phase = 'lobby';
-          showLobby();
-        } else {
-          state.phase = 'playing';
-          render();
+      var sid=res.spiel_id;
+      return apiCall('/api/spiel/'+sid+'/beitreten','POST',{name:name,geschlecht:g}).then(function(r){
+        state.spiel_id=sid;state.spiel_code=code;state.spielstand=r.spielstand;
+        state.mein_name=name;state.isHost=false;hideModal();connectWS();
+        if(r.spielstand.phase==='setup'||r.spielstand.phase==='lobby'){
+          state.phase='lobby';showLobby();
+        }else{
+          state.phase='playing';render();
         }
       });
-    }).catch(function(e){
-      showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">SPIEL NICHT GEFUNDEN ODER VOLL</div><button onclick="hideModal()">OK</button>');
+    }).catch(function(){
+      showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">SPIEL NICHT GEFUNDEN</div><button onclick="hideModal()">OK</button>');
     });
   });
-  document.getElementById('btnCancel2').addEventListener('click', hideModal);
+  document.getElementById('btnCancel2').addEventListener('click',hideModal);
 }
 
 // === LOBBY ===
-var lobbyPollTimer = null;
-
+var lobbyPollTimer=null;
 function showLobby(){
-  var sp = state.spielstand;
-  if(!sp){ showLogin(); return; }
-  
-  clearScreen('blue');
-  printCenter(0,'KAISER LOBBY','yellow','blue');
-  hLine(0,1,40,'=','white','blue');
-  
-  print(2,3,'SPIELCODE:','white','blue');
-  print(15,3,state.spiel_code,'light-green','blue');
-  
-  print(2,5,'EINLADUNG:','white','blue');
-  print(2,6,'falkkrueger.github.io','cyan','blue');
-  print(2,7,'/kaiser-online/?code=','cyan','blue');
-  print(2,8,state.spiel_code,'light-green','blue');
-  
-  print(2,10,'SPIELER:','yellow','blue');
-  for(var i=0;i<sp.spieler.length && i<12;i++){
-    var s = sp.spieler[i];
-    print(2,11+i,(i+1)+'. '+s.name+' ('+s.staat+')','white','blue');
+  var sp=state.spielstand;if(!sp){showLogin();return;}
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  printCenter(0,'KAISER LOBBY',7);
+  hLine(0,1,40,1);
+  print(2,3,'SPIELCODE:',1);
+  print(15,3,state.spiel_code,13);
+  print(2,5,'EINLADUNG:',1);
+  print(2,6,'falkkrueger.github.io',3);
+  print(2,7,'/kaiser-online/?code=',3);
+  print(2,8,state.spiel_code,13);
+  print(2,10,'SPIELER:',7);
+  for(var i=0;i<sp.spieler.length&&i<12;i++){
+    var s=sp.spieler[i];
+    print(2,11+i,(i+1)+'. '+s.name+' ('+s.staat+')',1);
   }
-  
-  printCenter(24,sp.spieler.length+' SPIELER','light-green','blue');
-  
-  infoEl.textContent = 'LOBBY - Code: '+state.spiel_code+' - '+sp.spieler.length+' Spieler';
-  
+  printCenter(24,sp.spieler.length+' SPIELER',13);
+  renderScreen();
+  infoEl.textContent='LOBBY - Code: '+state.spiel_code+' - '+sp.spieler.length+' Spieler';
   if(state.isHost){
-    navEl.innerHTML = '<button id="btnStart" style="background:var(--c64-green);font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL STARTEN</button><button id="btnLink" style="font-size:calc(min(1.4vw,1.2vh));padding:12px 16px">LINK TEILEN</button>';
-    document.getElementById('btnStart').addEventListener('click', function(){
+    navEl.innerHTML='<button id="btnStart" style="background:var(--c64-green);font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL STARTEN</button><button id="btnLink" style="font-size:calc(min(1.4vw,1.2vh));padding:12px 16px">LINK TEILEN</button>';
+    document.getElementById('btnStart').addEventListener('click',function(){
       apiCall('/api/spiel/'+state.spiel_id+'/starten','POST',{}).then(function(res){
-        state.spielstand = res.spielstand;
-        state.phase = 'playing';
+        state.spielstand=res.spielstand;state.phase='playing';
         if(lobbyPollTimer){clearInterval(lobbyPollTimer);lobbyPollTimer=null;}
         render();
       });
     });
-    document.getElementById('btnLink').addEventListener('click', function(){
-      var link = 'https://falkkrueger.github.io/kaiser-online/?code='+state.spiel_code;
-      if(navigator.share){
-        navigator.share({title:'Kaiser Online', text:'Komm Kaiser spielen! Code: '+state.spiel_code, url:link});
-      } else {
-        navigator.clipboard.writeText(link);
-        infoEl.textContent = 'LINK KOPIERT!';
-      }
+    document.getElementById('btnLink').addEventListener('click',function(){
+      var link='https://falkkrueger.github.io/kaiser-online/?code='+state.spiel_code;
+      if(navigator.share){navigator.share({title:'Kaiser Online',text:'Komm Kaiser spielen! Code: '+state.spiel_code,url:link});}
+      else{navigator.clipboard.writeText(link);infoEl.textContent='LINK KOPIERT!';}
     });
-  } else {
-    navEl.innerHTML = '<button disabled style="opacity:0.5">WARTE AUF START...</button>';
+  }else{
+    navEl.innerHTML='<button disabled style="opacity:0.5">WARTE AUF START...</button>';
   }
-  
-  // Lobby-Polling: Alle 3 Sekunden Spielstand aktualisieren
-  if(lobbyPollTimer) clearInterval(lobbyPollTimer);
-  lobbyPollTimer = setInterval(function(){
+  if(lobbyPollTimer)clearInterval(lobbyPollTimer);
+  lobbyPollTimer=setInterval(function(){
     apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
-      state.spielstand = stand;
-      // Wenn Spiel gestartet wurde -> zum Spiel wechseln
-      if(stand.phase !== 'setup' && stand.phase !== SpielPhase_SETUP){
-        if(lobbyPollTimer){clearInterval(lobbyPollTimer);lobbyPollTimer=null;}
-        state.phase = 'playing';
-        render();
-      } else {
-        // Lobby aktualisieren
-        showLobby();
-      }
+      state.spielstand=stand;
+      if(stand.phase!=='setup'){if(lobbyPollTimer){clearInterval(lobbyPollTimer);lobbyPollTimer=null;}state.phase='playing';render();}
+      else{showLobby();}
     }).catch(function(){});
-  }, 3000);
+  },3000);
 }
 
-// === Game Action ===
-function doAktion(aktion, parameter){
-  return apiCall('/api/spiel/'+state.spiel_id+'/aktion','POST',{aktion:aktion, parameter:parameter||{}})
-    .then(function(res){
-      // After action, refresh full state via REST (in case WS doesn't work)
-      return apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
-        state.spielstand = stand;
-        return res;
-      }).catch(function(){ return res; });
-    });
-}
-
-// === Number input modal ===
-function numberInput(title, max, callback){
-  state.eingabe_wert = '';
-  state.eingabe_max = max || 999999;
-  showModal(
-    '<div class="c64-modal-title">'+title+'</div>'+
-    '<div style="text-align:center;font-size:16px;color:var(--c64-light-green);margin:10px 0" id="numDisplay">0</div>'+
-    '<div class="c64-keypad">'+
-    '<button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button><button data-d="C">C</button><button data-d="back">&lt;</button>'+
-    '<button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button><button data-d="0">0</button><button data-d="ok" class="c64-keypad-wide" style="grid-row:span 2">OK</button>'+
-    '<button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button><button data-d="00">00</button>'+
-    '</div>'
-  );
-  var disp = document.getElementById('numDisplay');
-  modalContent.querySelectorAll('.c64-keypad button').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var d = this.getAttribute('data-d');
-      if(d === 'C'){ state.eingabe_wert = ''; }
-      else if(d === 'back'){ state.eingabe_wert = state.eingabe_wert.slice(0,-1); }
-      else if(d === 'ok'){
-        var val = parseInt(state.eingabe_wert||'0');
-        hideModal();
-        callback(val);
-        return;
-      }
-      else { 
-        var neu = state.eingabe_wert + d;
-        if(parseInt(neu) <= state.eingabe_max) state.eingabe_wert = neu;
-      }
-      disp.textContent = fmtNum(parseInt(state.eingabe_wert||'0'));
-    });
-  });
-  disp.textContent = '0';
-}
-
-// === Menu selection (for Bild 5, Militär, etc.) ===
-function menuSelect(title, items, callback){
-  var html = '<div class="c64-modal-title">'+title+'</div>';
-  items.forEach(function(item, i){
-    html += '<button style="display:block;width:100%;margin:4px 0;font-size:9px" data-idx="'+i+'">'+item.label+'</button>';
-  });
-  html += '<button style="display:block;width:100%;margin:4px 0;font-size:9px" id="menuCancel">ABBRECHEN</button>';
-  showModal(html);
-  modalContent.querySelectorAll('button[data-idx]').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var idx = parseInt(this.getAttribute('data-idx'));
-      hideModal();
-      callback(items[idx]);
-    });
-  });
-  document.getElementById('menuCancel').addEventListener('click', hideModal);
-}
-
-// === Render based on state ===
-function render(){
-  if(state.phase === 'login'){ showLogin(); return; }
-  if(state.phase === 'lobby'){ showLobby(); return; }
-  if(!state.spielstand){ showLogin(); return; }
-  
-  var sp = state.spielstand;
-  var ich = sp.spieler[sp.aktiver_spieler_idx];
-  var istMeinZug = (ich && ich.name === state.mein_name);
-  
-  if(sp.spiel_beendet){
-    showKroenung(sp);
-    return;
-  }
-  
-  if(!istMeinZug){
-    showWaiting(sp);
-    return;
-  }
-  
-  // Mein Zug - zeige aktuellen Bild-Schritt
-  switch(state.bildStep){
-    case 0: showBild1Handel(sp, ich); break;
-    case 1: showBild1KornAusgabe(sp, ich); break;
-    case 2: showBild2Statistik(sp, ich); break;
-    case 3: showBild3Steuern(sp, ich); break;
-    case 4: showBild4Karte(sp, ich); break;
-    case 5: showBild5Ausgaben(sp, ich); break;
-    default: state.bildStep = 0; showBild1Handel(sp, ich);
-  }
-}
-
-// === Waiting screen ===
-var waitPollTimer = null;
-
+// === WAITING ===
+var waitPollTimer=null;
 function showWaiting(sp){
-  var aktiv = sp.spieler[sp.aktiver_spieler_idx];
-  clearScreen('blue');
-  fillRect(0,0,40,3,' ','light-blue','black');
-  printCenter(0,'KAISER','yellow','black');
-  printCenter(1,'WARTE AUF ZUG','white','black');
-  printCenter(8,aktiv.name+' IST DRAN','yellow','blue');
-  printCenter(10,aktiv.titel+' VON '+aktiv.staat,'light-green','blue');
-  printCenter(12,'JAHR '+sp.jahr,'white','blue');
-  printCenter(16,'DU BIST SPIELER:','light-grey','blue');
-  printCenter(18,state.mein_name,'cyan','blue');
-  var ichSpieler = sp.spieler.find(function(s){return s.name === state.mein_name});
-  if(ichSpieler){
-    printCenter(20,ichSpieler.titel||'(KEIN TITEL)','light-green','blue');
-    printCenter(22,'GELD: '+fmtNum(ichSpieler.geld),'yellow','blue');
+  var aktiv=sp.spieler[sp.aktiver_spieler_idx];
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,3,0);
+  printCenter(0,'KAISER',7);
+  printCenter(1,'WARTE AUF ZUG',1);
+  printCenter(8,aktiv.name+' IST DRAN',7);
+  printCenter(10,(aktiv.titel||'')+' VON '+aktiv.staat,13);
+  printCenter(12,'JAHR '+sp.jahr,1);
+  printCenter(16,'DU BIST:',11);
+  printCenter(18,state.mein_name,3);
+  var ich=sp.spieler.find(function(s){return s.name===state.mein_name});
+  if(ich){
+    printCenter(20,ich.titel||'(KEIN TITEL)',13);
+    printCenter(22,'GELD: '+fmtNum(ich.geld),7);
   }
-  printCenter(24,'WARTEN...','light-red','blue');
-  infoEl.textContent = 'Warte auf '+aktiv.name+' - Seite offen lassen!';
-  navEl.innerHTML = '';
-  
-  // Polling: Prüfen ob ich dran bin
-  if(waitPollTimer) clearInterval(waitPollTimer);
-  waitPollTimer = setInterval(function(){
+  printCenter(24,'WARTEN...',10);
+  renderScreen();
+  infoEl.textContent='Warte auf '+aktiv.name+' - Seite offen lassen!';
+  navEl.innerHTML='';
+  if(waitPollTimer)clearInterval(waitPollTimer);
+  waitPollTimer=setInterval(function(){
     apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
-      state.spielstand = stand;
-      var ichBinDran = stand.spieler[stand.aktiver_spieler_idx] && 
-                       stand.spieler[stand.aktiver_spieler_idx].name === state.mein_name;
-      if(ichBinDran){
-        if(waitPollTimer){clearInterval(waitPollTimer);waitPollTimer=null;}
-        state.bildStep = 0;
-        render();
-      }
+      state.spielstand=stand;
+      var dran=stand.spieler[stand.aktiver_spieler_idx]&&stand.spieler[stand.aktiver_spieler_idx].name===state.mein_name;
+      if(dran){if(waitPollTimer){clearInterval(waitPollTimer);waitPollTimer=null;}state.bildStep=0;render();}
     }).catch(function(){});
-  }, 3000);
+  },3000);
 }
 
-// === BILD 1: Handel ===
-function showBild1Handel(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,3,' ','light-blue','black');
-  printCenter(0,'KAISER','yellow','black');
-  print(2,1,s.titel+' '+s.name,'white','black');
-  print(2,2,'WETTER: '+sp.wetter.toUpperCase(),'light-green','black');
-  print(22,1,'KORNPREIS:'+fmtNum(sp.kornpreis),'yellow','black');
-  print(22,2,'LANDPREIS: '+fmtNum(sp.landpreis),'yellow','black');
-  
-  // Kornspeicher
-  print(2,4,'KORNSPEICHER','white','blue');
-  box(2,5,10,8,'white','blue');
-  var siloLevel = Math.min(6, Math.floor(s.korn / 3000));
-  for(var r=11;r>=12-siloLevel;r--)hLine(3,r,8,'#','yellow','blue');
-  
-  // Stats
-  print(15,4,'STATISTIK','white','blue');
-  var noetig = Math.floor(s.einwohner * 17);
-  print(15,5,'Korn:  '+fmtNum(s.korn),'light-green','blue');
-  print(15,6,'Noetig:'+fmtNum(noetig),'light-red','blue');
-  print(15,7,'Land:  '+fmtNum(s.land),'light-green','blue');
-  print(15,8,'Bebaut:'+fmtNum(s.land_bebaut),'yellow','blue');
-  print(15,9,'Geld:  '+fmtNum(s.geld),'light-green','blue');
-  print(15,10,'Einw.:   '+fmtNum(s.einwohner),'white','blue');
-  print(15,11,'Staedte:   '+s.staedte,'white','blue');
-  print(15,12,'Maerkte:   '+s.maerkte,'white','blue');
-  print(15,13,'Muehlen:   '+s.muehlen,'white','blue');
-  
-  // Menu
-  print(2,16,'KORN KAUFEN','white','blue');
-  print(2,17,'KORN VERKAUFEN','white','blue');
-  print(22,16,'LAND KAUFEN','white','blue');
-  print(22,17,'LAND VERKAUFEN','white','blue');
-  
-  hLine(0,20,40,'-','light-blue','blue');
-  printCenter(21,'WEITER ZUR KORNAUSGABE','yellow','blue');
-  
-  infoEl.textContent = 'BILD 1 - HANDEL | Korn/Land kaufen/verkaufen, dann weiter';
-  
-  navEl.innerHTML = 
-    '<button id="bKornK">KORN KAUF</button>'+
-    '<button id="bKornV">KORN VERK</button>'+
-    '<button id="bLandK">LAND KAUF</button>'+
-    '<button id="bLandV">LAND VERK</button>'+
-    '<button id="bWeiter">WEITER &gt;</button>';
-  
-  document.getElementById('bKornK').addEventListener('click', function(){
-    var maxK = Math.floor(s.geld / sp.kornpreis);
-    numberInput('KORN KAUFEN (max '+fmtNum(maxK)+')', maxK, function(menge){
-      doAktion('korn_kaufen',{menge:menge}).then(render);
-    });
-  });
-  document.getElementById('bKornV').addEventListener('click', function(){
-    numberInput('KORN VERKAUFEN (max '+fmtNum(s.korn)+')', s.korn, function(menge){
-      doAktion('korn_verkaufen',{menge:menge}).then(render);
-    });
-  });
-  document.getElementById('bLandK').addEventListener('click', function(){
-    var maxL = Math.floor(s.geld / sp.landpreis);
-    numberInput('LAND KAUFEN (max '+fmtNum(maxL)+' Ha)', maxL, function(hektar){
-      doAktion('land_kaufen',{hektar:hektar}).then(render);
-    });
-  });
-  document.getElementById('bLandV').addEventListener('click', function(){
-    numberInput('LAND VERKAUFEN (max '+fmtNum(s.land)+' Ha)', s.land, function(hektar){
-      doAktion('land_verkaufen',{hektar:hektar}).then(render);
-    });
-  });
-  document.getElementById('bWeiter').addEventListener('click', function(){
-    state.bildStep = 1; render();
-  });
-}
-
-// === BILD 1b: Kornausgabe ===
-function showBild1KornAusgabe(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,2,' ','light-blue','black');
-  printCenter(0,'KORNAUSGABE AN VOLK','yellow','black');
-  print(2,1,s.name+' - JAHR '+sp.jahr,'white','black');
-  
-  var noetig = Math.floor(s.einwohner * 17);
-  var maxAus = Math.floor(s.korn * 0.8);
-  
-  print(2,4,'KORN VORRAETIG: '+fmtNum(s.korn),'light-green','blue');
-  print(2,5,'BENOETIGT:      '+fmtNum(noetig),'light-red','blue');
-  print(2,6,'MAX AUSGEBAR:   '+fmtNum(maxAus),'yellow','blue');
-  
-  box(1,8,38,6,'white','blue');
-  print(3,9,'GIB KORN AN DEIN VOLK!','yellow','blue');
-  print(3,10,'WENIGER = VERHUNGERN','light-red','blue');
-  print(3,11,'MEHR = EINWANDERUNG','light-green','blue');
-  print(3,12,'OPTIMUM = NOETIG + 20%','cyan','blue');
-  
-  printCenter(16,'AUSGABE MENGE EINGEBEN','white','blue');
-  
-  infoEl.textContent = 'KORNAUSGABE | Wieviel Korn ans Volk?';
-  
-  navEl.innerHTML = 
-    '<button id="bMin">MINIMUM</button>'+
-    '<button id="bNoetig">NOETIG</button>'+
-    '<button id="bMax">MAXIMUM</button>'+
-    '<button id="bEigene">EIGENE</button>'+
-    '<button id="bWeiter2">WEITER &gt;</button>';
-  
-  document.getElementById('bMin').addEventListener('click', function(){
-    doAktion('korn_ausgeben',{menge:0}).then(function(){ state.bildStep=2; render(); });
-  });
-  document.getElementById('bNoetig').addEventListener('click', function(){
-    doAktion('korn_ausgeben',{menge:noetig}).then(function(){ state.bildStep=2; render(); });
-  });
-  document.getElementById('bMax').addEventListener('click', function(){
-    doAktion('korn_ausgeben',{menge:maxAus}).then(function(){ state.bildStep=2; render(); });
-  });
-  document.getElementById('bEigene').addEventListener('click', function(){
-    numberInput('KORNAUSGABE (max '+fmtNum(maxAus)+')', maxAus, function(menge){
-      doAktion('korn_ausgeben',{menge:menge}).then(function(){ state.bildStep=2; render(); });
-    });
-  });
-  document.getElementById('bWeiter2').addEventListener('click', function(){
-    doAktion('korn_ausgeben',{menge:noetig}).then(function(){ state.bildStep=2; render(); });
-  });
-}
-
-// === BILD 2: Statistik ===
-function showBild2Statistik(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,2,' ','light-blue','black');
-  printCenter(0,'STATISTIK '+sp.jahr,'yellow','black');
-  print(2,1,s.titel+' '+s.name+' VON '+s.staat,'white','black');
-  
-  // Compute some stats
-  var noetig = Math.floor(s.einwohner * 17);
-  var kornAus = s.korn_ausgabe_letztes_jahr || 0;
-  
-  print(2,3,'KORNAUSGABE: '+fmtNum(kornAus),'white','blue');
-  if(kornAus < noetig){
-    print(2,4,'WARNUNG: ZU WENIG KORN!','light-red','blue');
-  } else if(kornAus > noetig * 1.2){
-    print(2,4,'VOLK IST ZUFRIEDEN!','light-green','blue');
+// === BILD 1: HANDEL ===
+function showBild1Handel(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,3,0);
+  printCenter(0,'KAISER',7);
+  print(2,1,(s.titel||'')+' '+s.name,1);
+  print(2,2,'WETTER: '+sp.wetter.toUpperCase(),13);
+  print(22,1,'KORNPREIS:'+fmtNum(sp.kornpreis),7);
+  print(22,2,'LANDPREIS: '+fmtNum(sp.landpreis),7);
+  // Kornspeicher (visual silo using custom chars)
+  print(2,4,'KORNSPEICHER',1);
+  // Draw silo box using C64 line characters
+  var si=6; // silo level in rows
+  var fillLevel=Math.min(si,Math.floor(s.korn/3000));
+  for(var r=5;r<13;r++){
+    poke(2,r,108,1); // left border
+    poke(11,r,108,1); // right border (use | char)
   }
-  
-  hLine(0,6,40,'-','light-blue','blue');
-  
-  print(2,7,'EINWOHNER: '+fmtNum(s.einwohner),'white','blue');
-  print(2,8,'GELD:      '+fmtNum(s.geld),'yellow','blue');
-  print(2,9,'KORN:      '+fmtNum(s.korn),'light-green','blue');
-  print(2,10,'LAND:      '+fmtNum(s.land),'light-green','blue');
-  
-  hLine(0,12,40,'-','light-blue','blue');
-  
-  print(2,13,'EINNAHMEN:','yellow','blue');
-  print(4,14,'Maerkte:  '+fmtNum(s.maerkte*100),'light-green','blue');
-  print(4,15,'Muehlen:  '+fmtNum(s.muehlen*150),'light-green','blue');
-  print(4,16,'Zoll:     '+fmtNum(Math.floor(s.einwohner*s.steuer_zoll/100*10)),'light-green','blue');
-  print(4,17,'MWST:     '+fmtNum(Math.floor(s.einwohner*s.steuer_mwst/100*8)),'light-green','blue');
-  print(4,18,'Einkomm:  '+fmtNum(Math.floor(s.einwohner*s.steuer_einkommen/100*12)),'light-green','blue');
-  
-  hLine(0,20,40,'-','light-blue','blue');
-  print(2,21,'VERMOEGEN: '+fmtNum(s.geld),'yellow','blue');
-  print(2,22,'RANG: '+(s.titel||'KEINER'),'light-green','blue');
-  
-  printCenter(24,'WEITER ZU STEUERN','light-green','blue');
-  
-  infoEl.textContent = 'STATISTIK | Weiter zu Steuern';
-  navEl.innerHTML = '<button id="bWeiter3">WEITER ZU STEUERN &gt;</button>';
-  document.getElementById('bWeiter3').addEventListener('click', function(){
-    state.bildStep=3; render();
+  poke(2,4,109,1); poke(11,4,109,1); // top corners
+  poke(2,13,109,1); poke(11,13,109,1); // bottom corners
+  for(var c=3;c<11;c++) poke(c,4,67,1); // top line
+  for(var c=3;c<11;c++) poke(c,13,67,1); // bottom line
+  // Fill silo
+  for(var r=12;r>=13-fillLevel;r--){
+    for(var c=3;c<11;c++) poke(c,r,160,7); // filled = yellow block char
+  }
+  // Stats
+  print(15,4,'STATISTIK',1);
+  var noetig=Math.floor(s.einwohner*17);
+  print(15,5,'Korn:  '+fmtNum(s.korn),13);
+  print(15,6,'Noetig:'+fmtNum(noetig),10);
+  print(15,7,'Land:  '+fmtNum(s.land),13);
+  print(15,8,'Bebaut:'+fmtNum(s.land_bebaut),7);
+  print(15,9,'Geld:  '+fmtNum(s.geld),13);
+  print(15,10,'Einw.:   '+fmtNum(s.einwohner),1);
+  print(15,11,'Staedte:   '+s.staedte,1);
+  print(15,12,'Maerkte:   '+s.maerkte,1);
+  print(15,13,'Muehlen:   '+s.muehlen,1);
+  // Menu
+  print(2,16,'KORN KAUFEN',1);
+  print(2,17,'KORN VERKAUFEN',1);
+  print(22,16,'LAND KAUFEN',1);
+  print(22,17,'LAND VERKAUFEN',1);
+  hLine(0,20,40,11);
+  printCenter(21,'WEITER ZUR KORNAUSGABE',7);
+  renderScreen();
+  infoEl.textContent='BILD 1 - HANDEL | Korn/Land, dann weiter';
+  navEl.innerHTML='<button id="bKornK">KORN KAUF</button><button id="bKornV">KORN VERK</button><button id="bLandK">LAND KAUF</button><button id="bLandV">LAND VERK</button><button id="bWeiter">WEITER &gt;</button>';
+  document.getElementById('bKornK').addEventListener('click',function(){
+    var mk=Math.floor(s.geld/sp.kornpreis);
+    numberInput('KORN KAUFEN (max '+fmtNum(mk)+')',mk,function(m){doAktion('korn_kaufen',{menge:m}).then(render);});
   });
+  document.getElementById('bKornV').addEventListener('click',function(){
+    numberInput('KORN VERKAUFEN (max '+fmtNum(s.korn)+')',s.korn,function(m){doAktion('korn_verkaufen',{menge:m}).then(render);});
+  });
+  document.getElementById('bLandK').addEventListener('click',function(){
+    var ml=Math.floor(s.geld/sp.landpreis);
+    numberInput('LAND KAUFEN (max '+fmtNum(ml)+' Ha)',ml,function(h){doAktion('land_kaufen',{hektar:h}).then(render);});
+  });
+  document.getElementById('bLandV').addEventListener('click',function(){
+    numberInput('LAND VERKAUFEN (max '+fmtNum(s.land)+')',s.land,function(h){doAktion('land_verkaufen',{hektar:h}).then(render);});
+  });
+  document.getElementById('bWeiter').addEventListener('click',function(){state.bildStep=1;render();});
 }
 
-// === BILD 3: Steuern ===
-var JUSTIZ = ['SEHR FAIR','BESCHEIDEN','HART','GIERIG'];
-
-function showBild3Steuern(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,2,' ','light-blue','black');
-  printCenter(0,'STAATSEINNAHMEN','yellow','black');
-  print(2,1,s.titel+' '+s.name,'white','black');
-  
-  box(1,3,38,12,'white','blue');
-  
-  print(3,4,'ZOLL:           '+s.steuer_zoll+'%','yellow','blue');
-  print(3,5,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_zoll/100*10)),'light-green','blue');
-  print(3,7,'MEHRWERTST.:    '+s.steuer_mwst+'%','yellow','blue');
-  print(3,8,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_mwst/100*8)),'light-green','blue');
-  print(3,10,'EINKOMMENST.:  '+s.steuer_einkommen+'%','yellow','blue');
-  print(3,11,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_einkommen/100*12)),'light-green','blue');
-  print(3,13,'JUSTIZ: '+JUSTIZ[s.justiz],'light-red','blue');
-  
-  infoEl.textContent = 'STEUERN | Anpassen oder weiter zum Bauen';
-  
-  navEl.innerHTML = 
-    '<button id="bZoll">ZOLL</button>'+
-    '<button id="bMwst">MWST</button>'+
-    '<button id="bEink">EINK.ST</button>'+
-    '<button id="bJustiz">JUSTIZ</button>'+
-    '<button id="bWeiter4">WEITER &gt;</button>';
-  
-  document.getElementById('bZoll').addEventListener('click', function(){
-    numberInput('ZOLL (%)', 50, function(wert){
-      doAktion('steuern_aendern',{typ:'zoll',wert:wert}).then(render);
-    });
+// === BILD 1b: KORNAUSGABE ===
+function showBild1KornAusgabe(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,2,0);
+  printCenter(0,'KORNAUSGABE AN VOLK',7);
+  print(2,1,s.name+' - JAHR '+sp.jahr,1);
+  var noetig=Math.floor(s.einwohner*17);
+  var maxAus=Math.floor(s.korn*0.8);
+  print(2,4,'KORN VORRAETIG: '+fmtNum(s.korn),13);
+  print(2,5,'BENOETIGT:      '+fmtNum(noetig),10);
+  print(2,6,'MAX AUSGEBAR:   '+fmtNum(maxAus),7);
+  print(2,9,'GIB KORN AN VOLK!',7);
+  print(2,10,'WENIGER = VERHUNGERN',10);
+  print(2,11,'MEHR = EINWANDERUNG',13);
+  print(2,12,'OPTIMUM = NOETIG + 20%',3);
+  printCenter(16,'AUSGABE MENGE EINGEBEN',1);
+  renderScreen();
+  infoEl.textContent='KORNAUSGABE | Wieviel Korn ans Volk?';
+  navEl.innerHTML='<button id="bMin">MINIMUM</button><button id="bNoetig">NOETIG</button><button id="bMax">MAXIMUM</button><button id="bEigene">EIGENE</button><button id="bWeiter2">WEITER &gt;</button>';
+  document.getElementById('bMin').addEventListener('click',function(){doAktion('korn_ausgeben',{menge:0}).then(function(){state.bildStep=2;render();});});
+  document.getElementById('bNoetig').addEventListener('click',function(){doAktion('korn_ausgeben',{menge:noetig}).then(function(){state.bildStep=2;render();});});
+  document.getElementById('bMax').addEventListener('click',function(){doAktion('korn_ausgeben',{menge:maxAus}).then(function(){state.bildStep=2;render();});});
+  document.getElementById('bEigene').addEventListener('click',function(){
+    numberInput('KORNAUSGABE (max '+fmtNum(maxAus)+')',maxAus,function(m){doAktion('korn_ausgeben',{menge:m}).then(function(){state.bildStep=2;render();});});
   });
-  document.getElementById('bMwst').addEventListener('click', function(){
-    numberInput('MEHRWERTST. (%)', 50, function(wert){
-      doAktion('steuern_aendern',{typ:'mwst',wert:wert}).then(render);
-    });
-  });
-  document.getElementById('bEink').addEventListener('click', function(){
-    numberInput('EINKOMMENST. (%)', 99, function(wert){
-      doAktion('steuern_aendern',{typ:'einkommen',wert:wert}).then(render);
-    });
-  });
-  document.getElementById('bJustiz').addEventListener('click', function(){
-    menuSelect('JUSTIZ', [
-      {label:'SEHR FAIR', idx:0},{label:'BESCHEIDEN', idx:1},
-      {label:'HART', idx:2},{label:'GIERIG', idx:3}
-    ], function(item){
-      doAktion('justiz_aendern',{stufe:item.idx}).then(render);
-    });
-  });
-  document.getElementById('bWeiter4').addEventListener('click', function(){
-    state.bildStep=5; render(); // Skip to ausgaben (karte optional)
-  });
+  document.getElementById('bWeiter2').addEventListener('click',function(){doAktion('korn_ausgeben',{menge:noetig}).then(function(){state.bildStep=2;render();});});
 }
 
-// === BILD 5: Staatsausgaben ===
-function showBild5Ausgaben(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,2,' ','light-blue','black');
-  printCenter(0,'STAATSAUSGABEN','yellow','black');
-  print(2,1,s.titel+' '+s.name,'white','black');
-  
-  print(2,3,'VERMOEGEN: '+fmtNum(s.geld),'light-green','blue');
-  
-  print(2,5,'MARKTPLATZ   '+fmtNum(1000),'white','blue');
-  print(2,6,'KORNMUEHLE   '+fmtNum(2000),'white','blue');
-  print(2,7,'PALAST(TEIL) '+fmtNum(5000),'white','blue');
-  print(2,8,'KATHEDRALE   '+fmtNum(9000),'white','blue');
-  print(2,9,'MILITAER','light-red','blue');
-  print(2,10,'SPIELSTAND','cyan','blue');
-  print(2,11,'ENDE DES ZUGES','light-green','blue');
-  
-  // Right side: building status
-  print(22,3,'BAUSTAND:','white','blue');
-  print(22,4,'MAERKTE:  '+s.maerkte,'light-green','blue');
-  print(22,5,'MUEHLEN:  '+s.muehlen,'light-green','blue');
-  print(22,6,'STAEDTE:  '+s.staedte,'white','blue');
-  print(22,7,'PALAST:  '+s.palast_teile+'/16','yellow','blue');
-  print(22,8,'KATHED:  '+s.kathedrale_teile+'/14','yellow','blue');
-  print(22,10,'EINW.:   '+fmtNum(s.einwohner),'white','blue');
-  print(22,11,'LAND:    '+fmtNum(s.land),'white','blue');
-  print(22,12,'TRUPPEN: '+s.truppen.kavallerie+s.truppen.artillerie+s.truppen.infanterie,'white','blue');
-  
-  infoEl.textContent = 'BAUEN | Gebäude errichten, Militär, oder Zug beenden';
-  
-  navEl.innerHTML = 
-    '<button id="bMarkt">MARKT</button>'+
-    '<button id="bMuehle">MUEHLE</button>'+
-    '<button id="bPalast">PALAST</button>'+
-    '<button id="bKathed">KATHED</button>'+
-    '<button id="bMil">MILITAER</button>'+
-    '<button id="bEnde" style="background:var(--c64-green)">ZUG BEENDEN</button>';
-  
-  document.getElementById('bMarkt').addEventListener('click', function(){
-    doAktion('marktplatz_bauen').then(render);
+// === BILD 2: STATISTIK ===
+function showBild2Statistik(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,2,0);
+  printCenter(0,'STATISTIK '+sp.jahr,7);
+  print(2,1,(s.titel||'')+' '+s.name+' VON '+s.staat,1);
+  var noetig=Math.floor(s.einwohner*17);
+  var kornAus=s.korn_ausgabe_letztes_jahr||0;
+  print(2,3,'KORNAUSGABE: '+fmtNum(kornAus),1);
+  if(kornAus<noetig) print(2,4,'WARNUNG: ZU WENIG!',10);
+  else if(kornAus>noetig*1.2) print(2,4,'VOLK ZUFRIEDEN!',13);
+  hLine(0,6,40,11);
+  print(2,7,'EINWOHNER: '+fmtNum(s.einwohner),1);
+  print(2,8,'GELD:      '+fmtNum(s.geld),7);
+  print(2,9,'KORN:      '+fmtNum(s.korn),13);
+  print(2,10,'LAND:      '+fmtNum(s.land),13);
+  hLine(0,12,40,11);
+  print(2,13,'EINNAHMEN:',7);
+  print(4,14,'Maerkte:  '+fmtNum(s.maerkte*100),13);
+  print(4,15,'Muehlen:  '+fmtNum(s.muehlen*150),13);
+  print(4,16,'Zoll:     '+fmtNum(Math.floor(s.einwohner*s.steuer_zoll/100*10)),13);
+  print(4,17,'MWST:     '+fmtNum(Math.floor(s.einwohner*s.steuer_mwst/100*8)),13);
+  print(4,18,'Einkomm:  '+fmtNum(Math.floor(s.einwohner*s.steuer_einkommen/100*12)),13);
+  hLine(0,20,40,11);
+  print(2,21,'VERMOEGEN: '+fmtNum(s.geld),7);
+  print(2,22,'RANG: '+(s.titel||'KEINER'),13);
+  printCenter(24,'WEITER ZU STEUERN',13);
+  renderScreen();
+  infoEl.textContent='STATISTIK | Weiter zu Steuern';
+  navEl.innerHTML='<button id="bWeiter3">WEITER ZU STEUERN &gt;</button>';
+  document.getElementById('bWeiter3').addEventListener('click',function(){state.bildStep=3;render();});
+}
+
+// === BILD 3: STEUERN ===
+var JUSTIZ=['SEHR FAIR','BESCHEIDEN','HART','GIERIG'];
+function showBild3Steuern(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,2,0);
+  printCenter(0,'STAATSEINNAHMEN',7);
+  print(2,1,(s.titel||'')+' '+s.name,1);
+  print(2,3,'GESAMT: '+fmtNum(Math.floor(s.einwohner*(s.steuer_zoll/100*10+s.steuer_mwst/100*8+s.steuer_einkommen/100*12))+s.maerkte*100+s.muehlen*150),13);
+  print(2,5,'ZOLL:           '+s.steuer_zoll+'%',7);
+  print(2,6,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_zoll/100*10)),13);
+  print(2,8,'MEHRWERTST.:    '+s.steuer_mwst+'%',7);
+  print(2,9,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_mwst/100*8)),13);
+  print(2,11,'EINKOMMENST.:  '+s.steuer_einkommen+'%',7);
+  print(2,12,'  ERTRAG:    '+fmtNum(Math.floor(s.einwohner*s.steuer_einkommen/100*12)),13);
+  print(2,14,'JUSTIZ: '+JUSTIZ[s.justiz],10);
+  renderScreen();
+  infoEl.textContent='STEUERN | Anpassen oder weiter';
+  navEl.innerHTML='<button id="bZoll">ZOLL</button><button id="bMwst">MWST</button><button id="bEink">EINK.ST</button><button id="bJustiz">JUSTIZ</button><button id="bWeiter4">WEITER &gt;</button>';
+  document.getElementById('bZoll').addEventListener('click',function(){numberInput('ZOLL (%)',50,function(w){doAktion('steuern_aendern',{typ:'zoll',wert:w}).then(render);});});
+  document.getElementById('bMwst').addEventListener('click',function(){numberInput('MWST (%)',50,function(w){doAktion('steuern_aendern',{typ:'mwst',wert:w}).then(render);});});
+  document.getElementById('bEink').addEventListener('click',function(){numberInput('EINKOMMENST (%)',99,function(w){doAktion('steuern_aendern',{typ:'einkommen',wert:w}).then(render);});});
+  document.getElementById('bJustiz').addEventListener('click',function(){
+    menuSelect('JUSTIZ',[{label:'SEHR FAIR',idx:0},{label:'BESCHEIDEN',idx:1},{label:'HART',idx:2},{label:'GIERIG',idx:3}],function(item){doAktion('justiz_aendern',{stufe:item.idx}).then(render);});
   });
-  document.getElementById('bMuehle').addEventListener('click', function(){
-    doAktion('kornmühle_bauen').then(render);
-  });
-  document.getElementById('bPalast').addEventListener('click', function(){
-    doAktion('palast_bauen').then(render);
-  });
-  document.getElementById('bKathed').addEventListener('click', function(){
-    doAktion('kathedrale_bauen').then(render);
-  });
-  document.getElementById('bMil').addEventListener('click', function(){
-    showMilitaer(sp, s);
-  });
-  document.getElementById('bEnde').addEventListener('click', function(){
+  document.getElementById('bWeiter4').addEventListener('click',function(){state.bildStep=5;render();});
+}
+
+// === BILD 5: BAUEN ===
+function showBild5Ausgaben(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,2,0);
+  printCenter(0,'STAATSAUSGABEN',7);
+  print(2,1,(s.titel||'')+' '+s.name,1);
+  print(2,3,'VERMOEGEN: '+fmtNum(s.geld),13);
+  print(2,5,'MARKTPLATZ   '+fmtNum(1000),1);
+  print(2,6,'KORNMUEHLE   '+fmtNum(2000),1);
+  print(2,7,'PALAST(TEIL) '+fmtNum(5000),1);
+  print(2,8,'KATHEDRALE   '+fmtNum(9000),1);
+  print(2,9,'MILITAER',2);
+  print(2,10,'SPIELSTAND',3);
+  print(2,11,'ENDE DES ZUGES',13);
+  print(22,3,'BAUSTAND:',1);
+  print(22,4,'MAERKTE:  '+s.maerkte,13);
+  print(22,5,'MUEHLEN:  '+s.muehlen,13);
+  print(22,6,'STAEDTE:  '+s.staedte,1);
+  print(22,7,'PALAST:  '+s.palast_teile+'/16',7);
+  print(22,8,'KATHED:  '+s.kathedrale_teile+'/14',7);
+  print(22,10,'EINW.:   '+fmtNum(s.einwohner),1);
+  print(22,11,'LAND:    '+fmtNum(s.land),1);
+  print(22,12,'TRUPPEN: '+s.truppen.kavallerie+s.truppen.artillerie+s.truppen.infanterie,1);
+  renderScreen();
+  infoEl.textContent='BAUEN | Gebaeude, Militaer, oder Zug beenden';
+  navEl.innerHTML='<button id="bMarkt">MARKT</button><button id="bMuehle">MUEHLE</button><button id="bPalast">PALAST</button><button id="bKathed">KATHED</button><button id="bMil">MILITAER</button><button id="bEnde" style="background:var(--c64-green)">ZUG BEENDEN</button>';
+  document.getElementById('bMarkt').addEventListener('click',function(){doAktion('marktplatz_bauen').then(render);});
+  document.getElementById('bMuehle').addEventListener('click',function(){doAktion('kornmühle_bauen').then(render);});
+  document.getElementById('bPalast').addEventListener('click',function(){doAktion('palast_bauen').then(render);});
+  document.getElementById('bKathed').addEventListener('click',function(){doAktion('kathedrale_bauen').then(render);});
+  document.getElementById('bMil').addEventListener('click',function(){showMilitaer(sp,s);});
+  document.getElementById('bEnde').addEventListener('click',function(){
     doAktion('zug_beenden').then(function(res){
-      state.bildStep = 0;
-      if(res.befoerderung){
-        showBefoerderung(res.befoerderung, sp);
-      } else {
-        render();
-      }
+      state.bildStep=0;
+      if(res.befoerderung) showBefoerderung(res.befoerderung,sp);
+      else render();
     });
   });
 }
 
-// === Militär submenu ===
-function showMilitaer(sp, s){
-  clearScreen('blue');
-  fillRect(0,0,40,2,' ','light-blue','black');
-  printCenter(0,'MILITAER','yellow','black');
-  print(2,1,s.name+' - GELD: '+fmtNum(s.geld),'white','black');
-  
-  print(2,3,'TRUPPEN:','yellow','blue');
-  print(4,4,'Kavallerie: '+s.truppen.kavallerie,'white','blue');
-  print(4,5,'Artillerie: '+s.truppen.artillerie,'white','blue');
-  print(4,6,'Infanterie: '+s.truppen.infanterie,'white','blue');
-  print(4,7,'Miliz:      '+s.miliz,'light-grey','blue');
-  print(4,8,'Kampfwert:  '+s.truppen_kampfwert+'/100','light-green','blue');
-  
-  hLine(0,10,40,'-','light-blue','blue');
-  print(2,11,'KAVALLERIE  50/T','white','blue');
-  print(2,12,'ARTILLERIE  80/T','white','blue');
-  print(2,13,'INFANTERIE  30/T','white','blue');
-  print(2,14,'MANOEVER','light-green','blue');
-  print(2,15,'KRIEG FUEHREN','light-red','blue');
-  
-  infoEl.textContent = 'MILITAER | Truppen rekrutieren, Manöver, Krieg';
-  
-  navEl.innerHTML = 
-    '<button id="bKav">KAVALL</button>'+
-    '<button id="bArt">ARTILL</button>'+
-    '<button id="bInf">INFANT</button>'+
-    '<button id="bMano">MANOEV</button>'+
-    '<button id="bKrieg">KRIEG</button>'+
-    '<button id="bZurueck">ZURUECK</button>';
-  
-  document.getElementById('bKav').addEventListener('click', function(){
-    numberInput('KAVALLERIE REKRUTIEREN', s.einwohner, function(n){
-      doAktion('soldaten_rekrutieren',{typ:'kavallerie',anzahl:n}).then(function(){showMilitaer(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx])});
+// === MILITAER ===
+function showMilitaer(sp,s){
+  renderer.regs.border=14; renderer.regs.bg=6; clr(6);
+  fillRect(0,0,40,2,0);
+  printCenter(0,'MILITAER',7);
+  print(2,1,s.name+' - GELD: '+fmtNum(s.geld),1);
+  print(2,3,'TRUPPEN:',7);
+  print(4,4,'Kavallerie: '+s.truppen.kavallerie,1);
+  print(4,5,'Artillerie: '+s.truppen.artillerie,1);
+  print(4,6,'Infanterie: '+s.truppen.infanterie,1);
+  print(4,7,'Miliz:      '+s.miliz,11);
+  print(4,8,'Kampfwert:  '+s.truppen_kampfwert+'/100',13);
+  hLine(0,10,40,11);
+  print(2,11,'KAVALLERIE  50/T',1);
+  print(2,12,'ARTILLERIE  80/T',1);
+  print(2,13,'INFANTERIE  30/T',1);
+  print(2,14,'MANOEVER',13);
+  print(2,15,'KRIEG FUEHREN',2);
+  renderScreen();
+  infoEl.textContent='MILITAER | Rekrutieren, Manoever, Krieg';
+  navEl.innerHTML='<button id="bKav">KAVALL</button><button id="bArt">ARTILL</button><button id="bInf">INFANT</button><button id="bMano">MANOEV</button><button id="bKrieg">KRIEG</button><button id="bZurueck">ZURUECK</button>';
+  document.getElementById('bKav').addEventListener('click',function(){numberInput('KAVALLERIE',s.einwohner,function(n){doAktion('soldaten_rekrutieren',{typ:'kavallerie',anzahl:n}).then(function(){showMilitaer(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});});});
+  document.getElementById('bArt').addEventListener('click',function(){numberInput('ARTILLERIE',s.einwohner,function(n){doAktion('soldaten_rekrutieren',{typ:'artillerie',anzahl:n}).then(function(){showMilitaer(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});});});
+  document.getElementById('bInf').addEventListener('click',function(){numberInput('INFANTERIE',s.einwohner,function(n){doAktion('soldaten_rekrutieren',{typ:'infanterie',anzahl:n}).then(function(){showMilitaer(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});});});
+  document.getElementById('bMano').addEventListener('click',function(){doAktion('manoever').then(function(){showMilitaer(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});});
+  document.getElementById('bKrieg').addEventListener('click',function(){
+    var gegner=[]; sp.spieler.forEach(function(s2,i){
+      if(i!==sp.aktiver_spieler_idx&&!s2.tot) gegner.push({label:s2.name+' ('+s2.staat+')',idx:i});
     });
-  });
-  document.getElementById('bArt').addEventListener('click', function(){
-    numberInput('ARTILLERIE REKRUTIEREN', s.einwohner, function(n){
-      doAktion('soldaten_rekrutieren',{typ:'artillerie',anzahl:n}).then(function(){showMilitaer(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx])});
-    });
-  });
-  document.getElementById('bInf').addEventListener('click', function(){
-    numberInput('INFANTERIE REKRUTIEREN', s.einwohner, function(n){
-      doAktion('soldaten_rekrutieren',{typ:'infanterie',anzahl:n}).then(function(){showMilitaer(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx])});
-    });
-  });
-  document.getElementById('bMano').addEventListener('click', function(){
-    doAktion('manoever').then(function(){showMilitaer(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx])});
-  });
-  document.getElementById('bKrieg').addEventListener('click', function(){
-    var gegner = [];
-    sp.spieler.forEach(function(s2, i){
-      if(i !== sp.aktiver_spieler_idx && !s2.tot){
-        gegner.push({label:s2.name+' ('+s2.staat+')', idx:i});
-      }
-    });
-    if(gegner.length === 0){ infoEl.textContent = 'KEINE GEGNER'; return; }
-    menuSelect('KRIEG GEGEN WEN?', gegner, function(item){
+    if(!gegner.length){infoEl.textContent='KEINE GEGNER';return;}
+    menuSelect('KRIEG GEGEN WEN?',gegner,function(item){
       doAktion('krieg_erklaeren',{verteidiger_idx:item.idx}).then(function(res){
-        if(res.erfolg){
-          // Simplified: auto-resolve war
-          doAktion('krieg_durchfuehren',{verteidiger_idx:item.idx}).then(function(res2){
-            showKriegErgebnis(res2);
-          });
-        } else {
-          infoEl.textContent = res.fehler;
-        }
+        if(res.erfolg){doAktion('krieg_durchfuehren',{verteidiger_idx:item.idx}).then(showKriegErgebnis);}
+        else infoEl.textContent=res.fehler;
       });
     });
   });
-  document.getElementById('bZurueck').addEventListener('click', function(){
-    showBild5Ausgaben(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);
-  });
+  document.getElementById('bZurueck').addEventListener('click',function(){showBild5Ausgaben(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});
 }
 
 function showKriegErgebnis(res){
-  clearScreen('black');
-  printCenter(2,'KRIEGSERGEBNIS','yellow','black');
-  hLine(0,4,40,'=','white','black');
-  printCenter(6,res.angreifer+' VS','white','black');
-  printCenter(7,res.verteidiger,'white','black');
-  hLine(0,9,40,'-','light-blue','black');
+  renderer.regs.border=0; renderer.regs.bg=0; clr(0);
+  printCenter(2,'KRIEGSERGEBNIS',7);
+  printCenter(6,res.angreifer+' VS',1);
+  printCenter(7,res.verteidiger,1);
   if(res.angreifer_gewinnt){
-    printCenter(11,res.angreifer+' GEWINNT!','light-green','black');
-    if(res.land_gewinn) printCenter(13,'LANDGEWINN: '+fmtNum(res.land_gewinn)+' Ha','yellow','black');
-  } else {
-    printCenter(11,res.verteidiger+' GEWINNT!','light-red','black');
-    if(res.geld_verlust) printCenter(13,'GELDVERLUST: '+fmtNum(res.geld_verlust),'light-red','black');
+    printCenter(11,res.angreifer+' GEWINNT!',13);
+    if(res.land_gewinn) printCenter(13,'LANDGEWINN: '+fmtNum(res.land_gewinn)+' Ha',7);
+  }else{
+    printCenter(11,res.verteidiger+' GEWINNT!',10);
+    if(res.geld_verlust) printCenter(13,'GELDVERLUST: '+fmtNum(res.geld_verlust),10);
   }
-  hLine(0,15,40,'-','light-blue','black');
-  printCenter(17,'Verluste Angreifer: '+res.angreifer_verluste,'white','black');
-  printCenter(18,'Verluste Verteidiger: '+res.verteidiger_verluste,'white','black');
-  printCenter(22,'WEITER','light-green','black');
-  
-  infoEl.textContent = 'KRIEGSERGEBNIS';
-  navEl.innerHTML = '<button id="bWeiterKrieg">WEITER &gt;</button>';
-  document.getElementById('bWeiterKrieg').addEventListener('click', function(){
-    showMilitaer(state.spielstand, state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);
-  });
+  printCenter(17,'Verluste A: '+res.angreifer_verluste,1);
+  printCenter(18,'Verluste V: '+res.verteidiger_verluste,1);
+  printCenter(22,'WEITER',13);
+  renderScreen();
+  infoEl.textContent='KRIEGSERGEBNIS';
+  navEl.innerHTML='<button id="bWK">WEITER &gt;</button>';
+  document.getElementById('bWK').addEventListener('click',function(){showMilitaer(state.spielstand,state.spielstand.spieler[state.spielstand.aktiver_spieler_idx]);});
 }
 
-// === Beförderung ===
-function showBefoerderung(bef, sp){
-  var s = sp.spieler[sp.aktiver_spieler_idx];
-  clearScreen('yellow');
-  fillRect(4,4,32,14,' ','light-blue','green');
-  printCenter(5,'IHNEN WIRD EIN NEUER','white','green');
-  printCenter(6,'TITEL VERLIEHEN !','white','green');
-  printCenter(8,'SIE SIND NUN','white','green');
-  printCenter(10,bef.titel.toUpperCase()+' '+s.name,'yellow','green');
-  printCenter(11,'VON '+s.staat.toUpperCase()+' !','yellow','green');
-  printCenter(14,'[][]|||[][]|||[]','white','green');
-  
-  infoEl.textContent = 'BEFOERDERUNG! ' + bef.titel;
-  navEl.innerHTML = '<button id="bBefWeiter">WEITER &gt;</button>';
-  document.getElementById('bBefWeiter').addEventListener('click', function(){
-    state.bildStep = 0;
-    render();
-  });
+// === BEFOERDERUNG ===
+function showBefoerderung(bef,sp){
+  var s=sp.spieler[sp.aktiver_spieler_idx];
+  renderer.regs.border=7; renderer.regs.bg=7; clr(7); // yellow bg
+  fillRect(4,4,32,14,5); // green box
+  printCenter(5,'IHNEN WIRD EIN NEUER',1);
+  printCenter(6,'TITEL VERLIEHEN !',1);
+  printCenter(8,'SIE SIND NUN',1);
+  printCenter(10,bef.titel.toUpperCase()+' '+s.name,7);
+  printCenter(11,'VON '+s.staat.toUpperCase()+' !',7);
+  renderScreen();
+  infoEl.textContent='BEFOERDERUNG! '+bef.titel;
+  navEl.innerHTML='<button id="bBW">WEITER &gt;</button>';
+  document.getElementById('bBW').addEventListener('click',function(){state.bildStep=0;render();});
 }
 
-// === Krönung ===
+// === KROENUNG ===
 function showKroenung(sp){
-  clearScreen('yellow');
-  fillRect(2,2,36,18,' ','light-blue','green');
-  printCenter(4,'*** KROENUNG ***','yellow','green');
-  printCenter(7,'LANG LEBE','white','green');
-  var kaiser = sp.spieler[sp.kaiser_spieler_idx];
-  printCenter(9,'KAISER '+kaiser.name,'yellow','green');
-  printCenter(10,'VON '+kaiser.staat,'yellow','green');
-  printCenter(13,'*** *** ***','white','green');
-  printCenter(16,'DAS SPIEL IST VORBEI','light-red','green');
-  
-  infoEl.textContent = 'SPIELENDE - Kaiser '+kaiser.name;
-  navEl.innerHTML = '<button id="bNeu">NEUES SPIEL</button>';
-  document.getElementById('bNeu').addEventListener('click', function(){
-    state.phase = 'login';
-    state.spielstand = null;
-    state.spiel_id = null;
-    showLogin();
+  renderer.regs.border=7; renderer.regs.bg=7; clr(7);
+  fillRect(2,2,36,18,5);
+  printCenter(4,'*** KROENUNG ***',7);
+  printCenter(7,'LANG LEBE',1);
+  var k=sp.spieler[sp.kaiser_spieler_idx];
+  printCenter(9,'KAISER '+k.name,7);
+  printCenter(10,'VON '+k.staat,7);
+  printCenter(16,'DAS SPIEL IST VORBEI',10);
+  renderScreen();
+  infoEl.textContent='SPIELENDE - Kaiser '+k.name;
+  navEl.innerHTML='<button id="bNeu">NEUES SPIEL</button>';
+  document.getElementById('bNeu').addEventListener('click',function(){
+    state.phase='login';state.spielstand=null;state.spiel_id=null;showLogin();
   });
 }
 
-// === Start ===
+// === RENDER DISPATCH ===
+function render(){
+  if(state.phase==='login'){showLogin();return;}
+  if(state.phase==='lobby'){showLobby();return;}
+  if(!state.spielstand){showLogin();return;}
+  var sp=state.spielstand;
+  var ich=sp.spieler[sp.aktiver_spieler_idx];
+  var istMeinZug=(ich&&ich.name===state.mein_name);
+  if(sp.spiel_beendet){showKroenung(sp);return;}
+  if(!istMeinZug){showWaiting(sp);return;}
+  switch(state.bildStep){
+    case 0: showBild1Handel(sp,ich);break;
+    case 1: showBild1KornAusgabe(sp,ich);break;
+    case 2: showBild2Statistik(sp,ich);break;
+    case 3: showBild3Steuern(sp,ich);break;
+    case 5: showBild5Ausgaben(sp,ich);break;
+    default: state.bildStep=0; showBild1Handel(sp,ich);
+  }
+}
+
+// === START ===
 if(state.preFillCode){
-  // Auto-open join dialog with code pre-filled
   joinGame();
-  setTimeout(function(){
-    var inp = document.getElementById('inpCode');
-    if(inp) inp.value = state.preFillCode;
-  }, 100);
-} else {
+  setTimeout(function(){var inp=document.getElementById('inpCode');if(inp)inp.value=state.preFillCode;},100);
+}else{
   showLogin();
 }
 
