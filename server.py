@@ -106,33 +106,33 @@ async def list_staaten():
     return {"staaten": STAATEN}
 
 @app.post("/api/spiel/erstellen")
-async def spiel_erstellen(data: SpielErstellen):
-    """Neues Spiel erstellen. Gibt Spielcode zurück."""
-    if len(data.spieler) < 1 or len(data.spieler) > 9:
-        raise HTTPException(400, "1-9 Spieler erforderlich")
+async def spiel_erstellen(data: dict):
+    """Neues Spiel erstellen. Nur der Ersteller wird angelegt."""
+    name = data.get("name", "")[:10]
+    geschlecht = data.get("geschlecht", "M")
+    staat = data.get("staat", "Preussen")
+    
+    if not name:
+        raise HTTPException(400, "Name erforderlich")
     
     code = generiere_spielcode()
     spiel_id = f"kaiser_{code.lower()}"
     
     engine = KaiserEngine(spiel_id)
-    engine.setup(data.spieler)
+    # Spiel mit nur 1 Spieler starten, andere treten später bei
+    engine.setup([{"name": name, "geschlecht": geschlecht, "staat": staat}])
+    engine.phase = SpielPhase.SETUP  # Warten in Lobby bis Start
     
     spiele[spiel_id] = engine
     spiel_codes[code] = spiel_id
     ws_connections[spiel_id] = []
     spieler_kontakte[spiel_id] = {}
     
-    # Standardmäßig den Ersteller bei Falk's Telegram registrieren
-    if data.spieler:
-        notif.register_spieler(data.spieler[0]["name"], telegram_chat_id=FALK_CHAT_ID)
-        spieler_kontakte[spiel_id][data.spieler[0]["name"]] = {"telegram_chat_id": FALK_CHAT_ID}
-    
-    # Alle Spieler über Spielstart informieren
-    first_player = engine.aktiver_spieler
-    if first_player:
-        notif.notify_du_bist_dran(
-            first_player.name, code, engine.jahr, first_player.staat, KAISER_BASE_URL
-        )
+    # Ersteller registrieren für Notifications
+    tg = data.get("telegram_chat_id")
+    if tg:
+        notif.register_spieler(name, telegram_chat_id=tg)
+        spieler_kontakte[spiel_id][name] = {"telegram_chat_id": tg}
     
     return {
         "spiel_code": code,
@@ -140,10 +140,72 @@ async def spiel_erstellen(data: SpielErstellen):
         "spielstand": engine.spielstand(),
     }
 
+@app.post("/api/spiel/{spiel_id}/beitreten")
+async def spieler_beitreten(spiel_id: str, data: dict):
+    """Ein Spieler tritt einem bestehenden Spiel bei."""
+    spiel = get_spiel(spiel_id)
+    if spiel.spiel_beendet:
+        raise HTTPException(400, "Spiel bereits beendet")
+    if spiel.phase != SpielPhase.SETUP:
+        raise HTTPException(400, "Spiel bereits gestartet")
+    
+    name = data.get("name", "")[:10]
+    geschlecht = data.get("geschlecht", "M")
+    staat = data.get("staat", "")
+    
+    if not name:
+        raise HTTPException(400, "Name erforderlich")
+    
+    # Prüfen ob Name schon vergeben
+    for s in spiel.spieler:
+        if s.name == name:
+            raise HTTPException(400, "Name bereits vergeben")
+    
+    if len(spiel.spieler) >= 9:
+        raise HTTPException(400, "Spiel voll (max 9 Spieler)")
+    
+    # Staat automatisch wählen falls nicht angegeben
+    verfuegbare = [st for st in STAATEN if st not in [s.staat for s in spiel.spieler]]
+    if not staat or staat in [s.staat for s in spiel.spieler]:
+        staat = verfuegbare[0] if verfuegbare else STAATEN[len(spiel.spieler) % len(STAATEN)]
+    
+    from engine import Spieler, Truppen
+    neuer = Spieler(name=name, geschlecht=geschlecht, staat=staat)
+    spiel.spieler.append(neuer)
+    
+    # Kontakt registrieren
+    tg = data.get("telegram_chat_id")
+    if tg:
+        notif.register_spieler(name, telegram_chat_id=tg)
+        spieler_kontakte[spiel_id][name] = {"telegram_chat_id": tg}
+    
+    await broadcast_spielstand(spiel_id)
+    
+    return {"erfolg": True, "name": name, "staat": staat, "spielstand": spiel.spielstand()}
+
+@app.post("/api/spiel/{spiel_id}/starten")
+async def spiel_starten(spiel_id: str):
+    """Ersteller startet das Spiel aus der Lobby."""
+    spiel = get_spiel(spiel_id)
+    if spiel.phase != SpielPhase.SETUP:
+        raise HTTPException(400, "Spiel bereits gestartet")
+    if len(spiel.spieler) < 1:
+        raise HTTPException(400, "Keine Spieler")
+    
+    spiel.phase = SpielPhase.BILD1_HANDEL
+    
+    # Ersten Spieler benachrichtigen
+    code = next((c for c, s in spiel_codes.items() if s == spiel_id), "")
+    first = spiel.aktiver_spieler
+    if first:
+        notif.notify_du_bist_dran(first.name, code, spiel.jahr, first.staat, KAISER_BASE_URL)
+    
+    await broadcast_spielstand(spiel_id)
+    return {"erfolg": True, "spielstand": spiel.spielstand()}
+
 @app.post("/api/spiel/{spiel_id}/kontakt")
 async def kontakt_registrieren(spiel_id: str, data: dict):
     """Spieler-Kontaktdaten für Notifications registrieren."""
-    spiel = get_spiel(spiel_id)
     name = data.get("name", "")
     telegram_chat_id = data.get("telegram_chat_id")
     phone = data.get("phone")

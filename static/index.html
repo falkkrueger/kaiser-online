@@ -155,11 +155,19 @@ var state = {
   spielstand: null,
   ws: null,
   phase: 'login', // login, lobby, playing, waiting
-  bildStep: 0, // 0=handel, 1=kornausgabe, 2=statistik, 3=steuern, 4=karte, 5=ausgaben
+  bildStep: 0,
+  isHost: false,
   modalCallback: null,
   eingabe_wert: '',
   eingabe_max: 999999,
 };
+
+// === Auto-join from URL ?code= ===
+var urlParams = new URLSearchParams(location.search);
+var preCode = urlParams.get('code');
+if(preCode){
+  state.preFillCode = preCode.toUpperCase();
+}
 
 // === Build grid ===
 for(var r=0;r<ROWS;r++){
@@ -254,72 +262,53 @@ function showLogin(){
   printCenter(10,'ONLINE MULTIPLAYER','cyan','black');
   printCenter(20,'TAPPE EINE OPTION','yellow','black');
   
-  navEl.innerHTML = '<button id="btnNew" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">NEUES SPIEL</button><button id="btnJoin" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">BEITRETEN</button>';
+  navEl.innerHTML = '<button id="btnNew" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">NEUES SPIEL</button><button id="btnJoin" style="font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL BEITRETEN</button>';
   document.getElementById('btnNew').addEventListener('click', startNewGame);
   document.getElementById('btnJoin').addEventListener('click', joinGame);
 }
 
 function startNewGame(){
-  // Show setup modal
+  // Nur Ersteller-Daten abfragen
   showModal(
-    '<div class="c64-modal-title">NEUES SPIEL ERSTELLEN</div>'+
-    '<div class="c64-modal-label">WIEVIEL SPIELER? (1-9)</div>'+
-    '<input type="number" id="inpAnzahl" value="3" min="1" max="9">'+
-    '<div id="spielerInputs"></div>'+
-    '<div style="text-align:center;margin-top:10px">'+
-    '<button id="btnCreate">ERSTELLEN</button>'+
+    '<div class="c64-modal-title">NEUES SPIEL</div>'+
+    '<div class="c64-modal-label">DEIN NAME:</div>'+
+    '<input type="text" id="inpName" maxlength="10" placeholder="Name" autofocus>'+
+    '<div class="c64-modal-label">GESCHLECHT (M/W):</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button id="gM" style="flex:1">M</button><button id="gW" style="flex:1">W</button>'+
+    '</div>'+
+    '<div class="c64-modal-label">STAAT:</div>'+
+    '<select id="inpStaat" style="font-family:monospace;font-size:10px;width:100%;padding:6px">'+
+    '<option>Preussen</option><option>Bayern</option><option>Hessen</option><option>Boehmen</option><option>Sachsen</option><option>Wuerttemberg</option><option>Hannover</option><option>Pfalz</option><option>Braunschweig</option>'+
+    '</select>'+
+    '<div style="text-align:center;margin-top:12px">'+
+    '<button id="btnCreate">SPIEL ERSTELLEN</button>'+
     '<button id="btnCancel">ABBRECHEN</button>'+
     '</div>'
   );
   
-  var anzahlInp = document.getElementById('inpAnzahl');
-  var spielerDiv = document.getElementById('spielerInputs');
-  
-  function genInputs(){
-    var n = parseInt(anzahlInp.value)||1;
-    n = Math.max(1,Math.min(9,n));
-    var html = '';
-    var staaten = ['Preussen','Bayern','Hessen','Boehmen','Sachsen','Wuerttemberg','Hannover','Pfalz','Braunschweig'];
-    for(var i=0;i<n;i++){
-      html += '<div class="c64-modal-label">SPIELER '+(i+1)+' NAME:</div>';
-      html += '<input type="text" id="inpName'+i+'" value="" maxlength="10" placeholder="NAME">';
-      html += '<div class="c64-modal-label">GESCHLECHT (M/W):</div>';
-      html += '<input type="text" id="inpGeschlecht'+i+'" value="M" maxlength="1">';
-      html += '<div class="c64-modal-label">STAAT:</div>';
-      html += '<select id="inpStaat'+i+'" style="font-family:monospace;font-size:10px;width:100%;padding:4px">'+
-        staaten.map(function(s){return '<option'+(s===staaten[i]?' selected':'')+'>'+s+'</option>'}).join('')+
-        '</select>';
-    }
-    spielerDiv.innerHTML = html;
-  }
-  
-  anzahlInp.addEventListener('input', genInputs);
-  genInputs();
+  var geschlecht = 'M';
+  document.getElementById('gM').addEventListener('click', function(){geschlecht='M'; this.style.background='var(--c64-light-blue)'; document.getElementById('gW').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gW').addEventListener('click', function(){geschlecht='W'; this.style.background='var(--c64-light-blue)'; document.getElementById('gM').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gM').style.background = 'var(--c64-light-blue)';
   
   document.getElementById('btnCreate').addEventListener('click', function(){
-    var n = parseInt(anzahlInp.value)||1;
-    n = Math.max(1,Math.min(9,n));
-    var spieler = [];
-    for(var i=0;i<n;i++){
-      var name = (document.getElementById('inpName'+i).value||('Spieler'+(i+1))).slice(0,10);
-      var g = (document.getElementById('inpGeschlecht'+i).value||'M').toUpperCase();
-      var staat = document.getElementById('inpStaat'+i).value;
-      spieler.push({name:name, geschlecht:g, staat:staat});
-    }
-    apiCall('/api/spiel/erstellen','POST',{spieler:spieler}).then(function(res){
+    var name = document.getElementById('inpName').value.trim();
+    var staat = document.getElementById('inpStaat').value;
+    if(!name){ return; }
+    
+    apiCall('/api/spiel/erstellen','POST',{name:name, geschlecht:geschlecht, staat:staat}).then(function(res){
       state.spiel_id = res.spiel_id;
       state.spiel_code = res.spiel_code;
       state.spielstand = res.spielstand;
-      state.mein_name = spieler[0].name;
-      state.phase = 'playing';
+      state.mein_name = name;
+      state.phase = 'lobby';
+      state.isHost = true;
       hideModal();
       connectWS();
-      render();
-    }).catch(function(e){
-      showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">'+e+'</div><button onclick="hideModal()">OK</button>');
+      showLobby();
     });
   });
-  
   document.getElementById('btnCancel').addEventListener('click', hideModal);
 }
 
@@ -327,47 +316,97 @@ function joinGame(){
   showModal(
     '<div class="c64-modal-title">SPIEL BEITRETEN</div>'+
     '<div class="c64-modal-label">SPIELCODE (6 ZEICHEN):</div>'+
-    '<input type="text" id="inpCode" maxlength="6" style="text-transform:uppercase;letter-spacing:4px" placeholder="ABC123">'+
+    '<input type="text" id="inpCode" maxlength="6" style="text-transform:uppercase;letter-spacing:4px" placeholder="ABC123" autofocus value="'+(state.preFillCode||'')+'">'+
     '<div class="c64-modal-label">DEIN NAME:</div>'+
-    '<input type="text" id="inpName" maxlength="10" placeholder="NAME">'+
-    '<div class="c64-modal-label">TELEGRAM CHAT-ID (optional):</div>'+
-    '<input type="text" id="inpTgChat" placeholder="Optional fuer Notifications">'+
-    '<div class="c64-modal-label">HANDYNUMMER (optional, fuer SMS):</div>'+
-    '<input type="text" id="inpPhone" placeholder="+49...">'+
-    '<div style="text-align:center;margin-top:10px">'+
+    '<input type="text" id="inpName" maxlength="10" placeholder="Name">'+
+    '<div class="c64-modal-label">GESCHLECHT:</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button id="gM2" style="flex:1">M</button><button id="gW2" style="flex:1">W</button>'+
+    '</div>'+
+    '<div style="text-align:center;margin-top:12px">'+
     '<button id="btnJoin2">BEITRETEN</button>'+
     '<button id="btnCancel2">ABBRECHEN</button>'+
     '</div>'
   );
-  document.getElementById('inpCode').focus();
+  
+  var geschlecht = 'M';
+  document.getElementById('gM2').addEventListener('click', function(){geschlecht='M'; this.style.background='var(--c64-light-blue)'; document.getElementById('gW2').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gW2').addEventListener('click', function(){geschlecht='W'; this.style.background='var(--c64-light-blue)'; document.getElementById('gM2').style.background='var(--c64-dark-grey)'});
+  document.getElementById('gM2').style.background = 'var(--c64-light-blue)';
   
   document.getElementById('btnJoin2').addEventListener('click', function(){
     var code = document.getElementById('inpCode').value.toUpperCase();
-    var name = document.getElementById('inpName').value;
-    var tgChat = document.getElementById('inpTgChat') ? document.getElementById('inpTgChat').value : '';
-    var phone = document.getElementById('inpPhone') ? document.getElementById('inpPhone').value : '';
-    if(!code || code.length < 6){ infoEl.textContent='UNGUELTIGER CODE'; return; }
-    if(!name){ infoEl.textContent='NAME EINGEBEN'; return; }
+    var name = document.getElementById('inpName').value.trim();
+    if(!code || code.length < 6 || !name){ return; }
+    
     apiCall('/api/spiel/code/'+code).then(function(res){
-      state.spiel_id = res.spiel_id;
-      state.spiel_code = code;
-      state.spielstand = res.spielstand;
-      state.mein_name = name;
-      state.phase = 'playing';
-      hideModal();
-      connectWS();
-      // Kontakt registrieren für Notifications
-      if(tgChat || phone){
-        apiCall('/api/spiel/'+res.spiel_id+'/kontakt','POST',{
-          name:name, telegram_chat_id:tgChat||null, phone:phone||null
-        });
-      }
-      render();
-    }).catch(function(){
-      showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">SPIEL NICHT GEFUNDEN</div><button onclick="hideModal()">OK</button>');
+      var sid = res.spiel_id;
+      return apiCall('/api/spiel/'+sid+'/beitreten','POST',{name:name, geschlecht:geschlecht}).then(function(r){
+        state.spiel_id = sid;
+        state.spiel_code = code;
+        state.spielstand = r.spielstand;
+        state.mein_name = name;
+        state.phase = 'lobby';
+        state.isHost = false;
+        hideModal();
+        connectWS();
+        showLobby();
+      });
+    }).catch(function(e){
+      showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">SPIEL NICHT GEFUNDEN ODER VOLL</div><button onclick="hideModal()">OK</button>');
     });
   });
   document.getElementById('btnCancel2').addEventListener('click', hideModal);
+}
+
+// === LOBBY ===
+function showLobby(){
+  var sp = state.spielstand;
+  if(!sp){ showLogin(); return; }
+  
+  clearScreen('blue');
+  printCenter(0,'KAISER LOBBY','yellow','blue');
+  hLine(0,1,40,'=','white','blue');
+  
+  print(2,3,'SPIELCODE:','white','blue');
+  print(15,3,state.spiel_code,'light-green','blue');
+  
+  print(2,5,'EINLADUNG:','white','blue');
+  print(2,6,'falkkrueger.github.io','cyan','blue');
+  print(2,7,'/kaiser-online/?code=','cyan','blue');
+  print(2,8,state.spiel_code,'light-green','blue');
+  
+  print(2,10,'SPIELER:','yellow','blue');
+  for(var i=0;i<sp.spieler.length && i<12;i++){
+    var s = sp.spieler[i];
+    print(2,11+i,(i+1)+'. '+s.name+' ('+s.staat+')','white','blue');
+  }
+  
+  printCenter(24,sp.spieler.length+' SPIELER','light-green','blue');
+  
+  infoEl.textContent = 'LOBBY - Code: '+state.spiel_code;
+  
+  if(state.isHost){
+    navEl.innerHTML = '<button id="btnStart" style="background:var(--c64-green);font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL STARTEN</button><button id="btnLink" style="font-size:calc(min(1.4vw,1.2vh));padding:12px 16px">LINK KOPIEREN</button>';
+    document.getElementById('btnStart').addEventListener('click', function(){
+      apiCall('/api/spiel/'+state.spiel_id+'/starten','POST',{}).then(function(res){
+        state.spielstand = res.spielstand;
+        state.phase = 'playing';
+        render();
+      });
+    });
+    document.getElementById('btnLink').addEventListener('click', function(){
+      var link = 'https://falkkrueger.github.io/kaiser-online/?code='+state.spiel_code;
+      if(navigator.share){
+        navigator.share({title:'Kaiser Online', text:'Komm Kaiser spielen! Code: '+state.spiel_code, url:link});
+      } else {
+        navigator.clipboard.writeText(link);
+        infoEl.textContent = 'LINK KOPIERT: '+link;
+      }
+    });
+  } else {
+    navEl.innerHTML = '<button disabled style="opacity:0.5">WARTE AUF START...</button>';
+  }
 }
 
 // === Game Action ===
@@ -438,6 +477,7 @@ function menuSelect(title, items, callback){
 // === Render based on state ===
 function render(){
   if(state.phase === 'login'){ showLogin(); return; }
+  if(state.phase === 'lobby'){ showLobby(); return; }
   if(!state.spielstand){ showLogin(); return; }
   
   var sp = state.spielstand;
@@ -924,7 +964,16 @@ function showKroenung(sp){
 }
 
 // === Start ===
-showLogin();
+if(state.preFillCode){
+  // Auto-open join dialog with code pre-filled
+  joinGame();
+  setTimeout(function(){
+    var inp = document.getElementById('inpCode');
+    if(inp) inp.value = state.preFillCode;
+  }, 100);
+} else {
+  showLogin();
+}
 
 })();
 </script>
