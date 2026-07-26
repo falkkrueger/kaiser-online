@@ -152,12 +152,8 @@ async def spiel_erstellen(data: dict):
 
 @app.post("/api/spiel/{spiel_id}/beitreten")
 async def spieler_beitreten(spiel_id: str, data: dict):
-    """Ein Spieler tritt einem bestehenden Spiel bei."""
+    """Ein Spieler tritt einem bestehenden Spiel bei, oder steigt wieder ein."""
     spiel = get_spiel(spiel_id)
-    if spiel.spiel_beendet:
-        raise HTTPException(400, "Spiel bereits beendet")
-    if spiel.phase != SpielPhase.SETUP:
-        raise HTTPException(400, "Spiel bereits gestartet")
     
     name = data.get("name", "")[:10]
     geschlecht = data.get("geschlecht", "M")
@@ -166,20 +162,25 @@ async def spieler_beitreten(spiel_id: str, data: dict):
     if not name:
         raise HTTPException(400, "Name erforderlich")
     
-    # Prüfen ob Name schon vergeben
+    # Prüfen ob Spieler schon existiert (Rejoin)
     for s in spiel.spieler:
         if s.name == name:
-            raise HTTPException(400, "Name bereits vergeben")
+            # Rejoin: Spieler existiert schon, einfach Spielstand zurückgeben
+            return {"erfolg": True, "name": name, "rejoin": True, "spielstand": spiel.spielstand()}
+    
+    # Neuer Spieler - nur in Lobby-Phase möglich
+    if spiel.phase != SpielPhase.SETUP:
+        raise HTTPException(400, "Spiel bereits gestartet - nur Rejoin möglich")
     
     if len(spiel.spieler) >= 9:
         raise HTTPException(400, "Spiel voll (max 9 Spieler)")
     
-    # Staat automatisch wählen falls nicht angegeben
+    # Staat automatisch wählen
     verfuegbare = [st for st in STAATEN if st not in [s.staat for s in spiel.spieler]]
     if not staat or staat in [s.staat for s in spiel.spieler]:
         staat = verfuegbare[0] if verfuegbare else STAATEN[len(spiel.spieler) % len(STAATEN)]
     
-    from engine import Spieler, Truppen
+    from engine import Spieler
     neuer = Spieler(name=name, geschlecht=geschlecht, staat=staat)
     spiel.spieler.append(neuer)
     
@@ -191,7 +192,7 @@ async def spieler_beitreten(spiel_id: str, data: dict):
     
     await broadcast_spielstand(spiel_id)
     
-    return {"erfolg": True, "name": name, "staat": staat, "spielstand": spiel.spielstand()}
+    return {"erfolg": True, "name": name, "rejoin": False, "staat": staat, "spielstand": spiel.spielstand()}
 
 @app.post("/api/spiel/{spiel_id}/starten")
 async def spiel_starten(spiel_id: str):

@@ -346,11 +346,17 @@ function joinGame(){
         state.spiel_code = code;
         state.spielstand = r.spielstand;
         state.mein_name = name;
-        state.phase = 'lobby';
         state.isHost = false;
         hideModal();
         connectWS();
-        showLobby();
+        // Wenn Spiel schon läuft -> direkt ins Spiel, sonst Lobby
+        if(r.spielstand.phase === 'setup' || r.spielstand.phase === 'lobby'){
+          state.phase = 'lobby';
+          showLobby();
+        } else {
+          state.phase = 'playing';
+          render();
+        }
       });
     }).catch(function(e){
       showModal('<div class="c64-modal-title">FEHLER</div><div style="color:var(--c64-light-red);font-size:8px">SPIEL NICHT GEFUNDEN ODER VOLL</div><button onclick="hideModal()">OK</button>');
@@ -360,6 +366,8 @@ function joinGame(){
 }
 
 // === LOBBY ===
+var lobbyPollTimer = null;
+
 function showLobby(){
   var sp = state.spielstand;
   if(!sp){ showLogin(); return; }
@@ -384,14 +392,15 @@ function showLobby(){
   
   printCenter(24,sp.spieler.length+' SPIELER','light-green','blue');
   
-  infoEl.textContent = 'LOBBY - Code: '+state.spiel_code;
+  infoEl.textContent = 'LOBBY - Code: '+state.spiel_code+' - '+sp.spieler.length+' Spieler';
   
   if(state.isHost){
-    navEl.innerHTML = '<button id="btnStart" style="background:var(--c64-green);font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL STARTEN</button><button id="btnLink" style="font-size:calc(min(1.4vw,1.2vh));padding:12px 16px">LINK KOPIEREN</button>';
+    navEl.innerHTML = '<button id="btnStart" style="background:var(--c64-green);font-size:calc(min(1.6vw,1.4vh));padding:12px 24px">SPIEL STARTEN</button><button id="btnLink" style="font-size:calc(min(1.4vw,1.2vh));padding:12px 16px">LINK TEILEN</button>';
     document.getElementById('btnStart').addEventListener('click', function(){
       apiCall('/api/spiel/'+state.spiel_id+'/starten','POST',{}).then(function(res){
         state.spielstand = res.spielstand;
         state.phase = 'playing';
+        if(lobbyPollTimer){clearInterval(lobbyPollTimer);lobbyPollTimer=null;}
         render();
       });
     });
@@ -401,12 +410,29 @@ function showLobby(){
         navigator.share({title:'Kaiser Online', text:'Komm Kaiser spielen! Code: '+state.spiel_code, url:link});
       } else {
         navigator.clipboard.writeText(link);
-        infoEl.textContent = 'LINK KOPIERT: '+link;
+        infoEl.textContent = 'LINK KOPIERT!';
       }
     });
   } else {
     navEl.innerHTML = '<button disabled style="opacity:0.5">WARTE AUF START...</button>';
   }
+  
+  // Lobby-Polling: Alle 3 Sekunden Spielstand aktualisieren
+  if(lobbyPollTimer) clearInterval(lobbyPollTimer);
+  lobbyPollTimer = setInterval(function(){
+    apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
+      state.spielstand = stand;
+      // Wenn Spiel gestartet wurde -> zum Spiel wechseln
+      if(stand.phase !== 'setup' && stand.phase !== SpielPhase_SETUP){
+        if(lobbyPollTimer){clearInterval(lobbyPollTimer);lobbyPollTimer=null;}
+        state.phase = 'playing';
+        render();
+      } else {
+        // Lobby aktualisieren
+        showLobby();
+      }
+    }).catch(function(){});
+  }, 3000);
 }
 
 // === Game Action ===
@@ -507,6 +533,8 @@ function render(){
 }
 
 // === Waiting screen ===
+var waitPollTimer = null;
+
 function showWaiting(sp){
   var aktiv = sp.spieler[sp.aktiver_spieler_idx];
   clearScreen('blue');
@@ -524,8 +552,23 @@ function showWaiting(sp){
     printCenter(22,'GELD: '+fmtNum(ichSpieler.geld),'yellow','blue');
   }
   printCenter(24,'WARTEN...','light-red','blue');
-  infoEl.textContent = 'KAISER ONLINE - Warte auf '+aktiv.name;
+  infoEl.textContent = 'Warte auf '+aktiv.name+' - Seite offen lassen!';
   navEl.innerHTML = '';
+  
+  // Polling: Prüfen ob ich dran bin
+  if(waitPollTimer) clearInterval(waitPollTimer);
+  waitPollTimer = setInterval(function(){
+    apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
+      state.spielstand = stand;
+      var ichBinDran = stand.spieler[stand.aktiver_spieler_idx] && 
+                       stand.spieler[stand.aktiver_spieler_idx].name === state.mein_name;
+      if(ichBinDran){
+        if(waitPollTimer){clearInterval(waitPollTimer);waitPollTimer=null;}
+        state.bildStep = 0;
+        render();
+      }
+    }).catch(function(){});
+  }, 3000);
 }
 
 // === BILD 1: Handel ===

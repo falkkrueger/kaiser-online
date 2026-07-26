@@ -432,9 +432,9 @@ class KaiserEngine:
         if s.geld < MARKTPLATZ_KOSTEN:
             return {"erfolg": False, "fehler": "Nicht genug Geld"}
         if s.land < MARKTPLATZ_LAND:
-            return {"erfolg": False, "fehler": "Nicht genug Land"}
+            return {"erfolg": False, "fehler": "Nicht genug freies Land (1000 Ha noetig)"}
         s.geld -= MARKTPLATZ_KOSTEN
-        s.land -= MARKTPLATZ_LAND
+        # Land ist Voraussetzung, wird NICHT abgezogen
         s.maerkte += 1
         return {"erfolg": True, "maerkte": s.maerkte, "geld": s.geld, "land": s.land}
     
@@ -443,9 +443,9 @@ class KaiserEngine:
         if s.geld < KORNMUEHLE_KOSTEN:
             return {"erfolg": False, "fehler": "Nicht genug Geld"}
         if s.land < KORNMUEHLE_LAND:
-            return {"erfolg": False, "fehler": "Nicht genug Land"}
+            return {"erfolg": False, "fehler": "Nicht genug freies Land (1000 Ha noetig)"}
         s.geld -= KORNMUEHLE_KOSTEN
-        s.land -= KORNMUEHLE_LAND
+        # Land ist Voraussetzung, wird NICHT abgezogen
         s.muehlen += 1
         return {"erfolg": True, "muehlen": s.muehlen, "geld": s.geld, "land": s.land}
     
