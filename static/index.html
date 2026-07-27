@@ -20,26 +20,28 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 
 .c64-border{
   background:var(--c64-light-blue);
-  padding:1.5vmin;border-radius:4px;flex-shrink:1;
+  padding:1vmin;border-radius:4px;
   display:flex;flex-direction:column;
-  max-width:100vw;max-height:100vh;
-  width:100vw;
+  width:100vw;max-width:100vw;max-height:100vh;
+  box-sizing:border-box;
 }
-/* Canvas fills available space, keeps 320:200 = 1.6:1 aspect ratio */
+/* Canvas - must leave room for info + nav buttons below */
 .c64-canvas-wrap{
   position:relative;
+  flex:1 1 auto;
+  min-height:0;
+  /* Use width-based sizing, not viewport height, to leave room for buttons */
   width:100%;
+  max-width:100%;
   aspect-ratio:320/200;
-  max-height:calc(100vh - 60px - 3vmin);
+  max-height:calc(100vh - 70px - 2vmin);
 }
 #c64canvas{
   width:100%;height:100%;
   image-rendering:pixelated;image-rendering:crisp-edges;
   -webkit-font-smoothing:none;
-  -webkit-optimize-contrast;
   image-rendering:-webkit-optimize-contrast;
-  display:block;
-  cursor:pointer;
+  display:block;cursor:pointer;
 }
 
 .c64-info{color:var(--c64-light-grey);font-size:calc(min(1.0vw,0.9vh));
@@ -84,12 +86,13 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 .c64-keypad button:active{background:var(--c64-light-blue);color:var(--c64-blue)}
 .c64-keypad-wide{grid-column:span 2}
 
-.c64-nav{display:flex;gap:6px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.c64-nav{display:flex;gap:6px;justify-content:center;margin-top:4px;flex-wrap:wrap;flex-shrink:0}
 .c64-nav button{
-  font-family:'Press Start 2P',monospace;font-size:calc(min(1.1vw,0.9vh));
+  font-family:'Press Start 2P',monospace;font-size:calc(min(1.6vw,1.4vh));
   background:var(--c64-light-blue);color:var(--c64-blue);border:none;
-  padding:8px 12px;border-radius:4px;cursor:pointer;
+  padding:10px 16px;border-radius:4px;cursor:pointer;
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  min-height:36px;min-width:80px;
 }
 .c64-nav button:active{background:var(--c64-white)}
 .c64-nav button:disabled{background:var(--c64-dark-grey);color:var(--c64-grey)}
