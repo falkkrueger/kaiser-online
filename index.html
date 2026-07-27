@@ -202,7 +202,7 @@ function fmtNum(n){
 function showModal(html){ modalContent.innerHTML=html; modalEl.style.display='flex'; }
 function hideModal(){ modalEl.style.display='none'; }
 
-function renderScreen(){ renderer.render(); }
+function renderScreen(mode){ renderer.render(mode || 'hires'); }
 
 // === API ===
 function apiCall(path, method, body){
@@ -282,7 +282,7 @@ function showLogin(){
   renderer.regs.bg = 0; // black
   clr(0);
   printCenter(4,'KAISER',7);
-  printCenter(6,'(C) 1984 ARIOLASOFT',2);
+  printCenter(6,'ONLINE EDITION',2);
   printCenter(10,'ONLINE MULTIPLAYER',3);
   printCenter(20,'TAPPE EINE OPTION',7);
   renderScreen();
@@ -663,7 +663,7 @@ function showBild4Karte(sp,s){
   
   printCenter(24,'JOYSTICK BEWEGEN ODER KNOPF',13);
   
-  renderScreen();
+  renderScreen('multicolor'); // Map uses multicolor mode for graphics
   infoEl.textContent='BILD 4 - LANDKARTE | Weiter zum Bauen';
   navEl.innerHTML='<button id="bKarteWeiter">WEITER ZU BAUEN &gt;</button>';
   document.getElementById('bKarteWeiter').addEventListener('click',function(){

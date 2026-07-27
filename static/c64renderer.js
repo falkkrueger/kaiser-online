@@ -86,17 +86,15 @@ class C64Renderer {
   }
   
   // Render the entire screen to canvas
-  render() {
+  // mode: 'hires' = 8px wide text (readable), 'multicolor' = 4px wide graphics
+  render(mode) {
     const ctx = this.ctx;
     const s = this.scale;
+    mode = mode || this.renderMode || 'hires'; // default to hires for readable text
     
     // Fill border
     ctx.fillStyle = C64_PALETTE[this.regs.border];
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw screen area (with 1-char border padding)
-    const offsetX = 0;
-    const offsetY = 0;
     
     for (let row = 0; row < this.rows; row++) {
       for (let col = 0; col < this.cols; col++) {
@@ -111,20 +109,30 @@ class C64Renderer {
           if (charBase + py >= this.charset.length) continue;
           const byteVal = this.charset[charBase + py];
           
-          // Multicolor mode: 2 bits per pixel, 4 pixels wide (doubled)
-          for (let px = 0; px < 4; px++) {
-            const bits = (byteVal >> (6 - px * 2)) & 0x03;
-            
-            let colorIdx;
-            if (bits === 0) colorIdx = this.regs.bg;
-            else if (bits === 1) colorIdx = this.regs.multi1;
-            else if (bits === 2) colorIdx = this.regs.multi2;
-            else colorIdx = charColor;
-            
-            ctx.fillStyle = C64_PALETTE[colorIdx];
-            const x = (col * 8 + px * 2) * s + offsetX;
-            const y = (row * 8 + py) * s + offsetY;
-            ctx.fillRect(x, y, 2 * s, s);
+          if (mode === 'multicolor') {
+            // Multicolor: 2 bits per pixel, 4 pixels wide (doubled)
+            for (let px = 0; px < 4; px++) {
+              const bits = (byteVal >> (6 - px * 2)) & 0x03;
+              let colorIdx;
+              if (bits === 0) colorIdx = this.regs.bg;
+              else if (bits === 1) colorIdx = this.regs.multi1;
+              else if (bits === 2) colorIdx = this.regs.multi2;
+              else colorIdx = charColor;
+              ctx.fillStyle = C64_PALETTE[colorIdx];
+              const x = (col * 8 + px * 2) * s;
+              const y = (row * 8 + py) * s;
+              ctx.fillRect(x, y, 2 * s, s);
+            }
+          } else {
+            // Hi-Res: 1 bit per pixel, 8 pixels wide (READABLE TEXT!)
+            for (let px = 0; px < 8; px++) {
+              const bit = (byteVal >> (7 - px)) & 1;
+              const colorIdx = bit ? charColor : this.regs.bg;
+              ctx.fillStyle = C64_PALETTE[colorIdx];
+              const x = (col * 8 + px) * s;
+              const y = (row * 8 + py) * s;
+              ctx.fillRect(x, y, s, s);
+            }
           }
         }
       }
