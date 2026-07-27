@@ -822,8 +822,11 @@ function showKriegErgebnis(res){
 // === BEFOERDERUNG ===
 function showBefoerderung(bef,sp){
   var s=sp.spieler[sp.aktiver_spieler_idx];
-  renderer.regs.border=7; renderer.regs.bg=7; clr(7); // yellow bg
-  fillRect(4,4,32,14,5); // green box
+  renderer.regs.border=7; renderer.regs.bg=5; // GREEN background for the box area
+  clr(5); // fill entire screen with green
+  // Yellow border around the green area
+  for(var c=0;c<40;c++){poke(c,0,32,7);poke(c,3,32,7);poke(c,17,32,7);poke(c,24,32,7);}
+  for(var r=0;r<25;r++){poke(0,r,32,7);poke(3,r,32,7);poke(36,r,32,7);poke(39,r,32,7);}
   printCenter(5,'IHNEN WIRD EIN NEUER',1);
   printCenter(6,'TITEL VERLIEHEN !',1);
   printCenter(8,'SIE SIND NUN',1);
