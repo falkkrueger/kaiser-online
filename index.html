@@ -184,36 +184,39 @@ function poke(col,row,ch,color){
   renderer.poke(col, row, ch, color);
 }
 function petToScreen(c){
-  if(c>=65 && c<=90) return c-64; // A-Z -> 1-26
-  if(c>=48 && c<=57) return c+48; // 0-9 -> 48-57... actually C64 screen codes: 0=48,1=49...
-  if(c===32) return 32;
-  if(c===46) return 46; // .
-  if(c===33) return 33; // !
-  if(c===58) return 58; // :
-  if(c===45) return 45; // -
-  if(c===43) return 43; // +
-  if(c===35) return 35; // #
-  if(c===36) return 36; // $
-  if(c===37) return 37; // %
-  if(c===38) return 38; // &
-  if(c===39) return 39; // '
-  if(c===40) return 40; // (
-  if(c===41) return 41; // )
-  if(c===42) return 42; // *
-  if(c===47) return 47; // /
-  if(c===60) return 60; // <
-  if(c===61) return 61; // =
-  if(c===62) return 62; // >
-  if(c===63) return 63; // ?
-  if(c===91) return 91; // [
-  if(c===93) return 93; // ]
-  if(c===94) return 94; // ^
-  if(c>=97 && c<=122) return c-96; // a-z -> 1-26 (same as A-Z in uppercase mode)
-  if(c===228) return 91; // ä -> [ position (C64 maps ä to screen code 91)
+  // C64 Screen Code mapping ( VIC-II text mode)
+  // A-Z (65-90) -> 1-26, a-z (97-122) -> 1-26
+  // 0-9 (48-57) -> 48-57, Space (32) -> 32
+  if(c>=65 && c<=90) return c-64;  // A-Z -> 1-26
+  if(c>=97 && c<=122) return c-96; // a-z -> 1-26
+  if(c>=48 && c<=57) return c;     // 0-9 -> 48-57
+  if(c===32) return 32;  // space
+  if(c===46) return 46;  // .
+  if(c===33) return 33;  // !
+  if(c===58) return 58;  // :
+  if(c===45) return 45;  // -
+  if(c===43) return 43;  // +
+  if(c===47) return 47;  // /
+  if(c===40) return 40;  // (
+  if(c===41) return 41;  // )
+  if(c===61) return 61;  // =
+  if(c===62) return 62;  // >
+  if(c===60) return 60;  // <
+  if(c===63) return 63;  // ?
+  if(c===35) return 35;  // #
+  if(c===36) return 36;  // $
+  if(c===37) return 37;  // %
+  if(c===38) return 38;  // &
+  if(c===39) return 39;  // '
+  if(c===42) return 42;  // *
+  if(c===44) return 44;  // ,
+  if(c===59) return 59;  // ;
+  // German umlauts (PETSCII mapping)
+  if(c===228) return 91; // ä
   if(c===246) return 93; // ö
   if(c===252) return 94; // ü
   if(c===223) return 95; // ß
-  return c;
+  return c; // fallback: pass through
 }
 function print(col,row,text,color){
   for(var i=0;i<text.length && col+i<40;i++){
