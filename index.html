@@ -448,22 +448,23 @@ function showBild1Handel(sp,s){
   print(2,2,'WETTER: '+sp.wetter.toUpperCase(),13);
   print(22,1,'KORNPREIS:'+fmtNum(sp.kornpreis),7);
   print(22,2,'LANDPREIS: '+fmtNum(sp.landpreis),7);
-  // Kornspeicher (visual silo using custom chars)
+  // Kornspeicher (visual silo using authentic C64 chars)
   print(2,4,'KORNSPEICHER',1);
-  // Draw silo box using C64 line characters
-  var si=6; // silo level in rows
-  var fillLevel=Math.min(si,Math.floor(s.korn/3000));
+  // Draw silo box using C64 custom border chars
+  // $7C=124=vertical line, $6E=110=horizontal bar, $7A=122=decorative border
   for(var r=5;r<13;r++){
-    poke(2,r,108,1); // left border
-    poke(11,r,108,1); // right border (use | char)
+    poke(2,r,124,1);  // left border = vertical line
+    poke(11,r,124,1); // right border
   }
-  poke(2,4,109,1); poke(11,4,109,1); // top corners
-  poke(2,13,109,1); poke(11,13,109,1); // bottom corners
-  for(var c=3;c<11;c++) poke(c,4,67,1); // top line
-  for(var c=3;c<11;c++) poke(c,13,67,1); // bottom line
-  // Fill silo
+  // Top/bottom borders
+  for(var c=3;c<11;c++){ poke(c,4,110,1); poke(c,13,110,1); }
+  // Corners
+  poke(2,4,122,1); poke(11,4,122,1);
+  poke(2,13,122,1); poke(11,13,122,1);
+  // Fill silo with C64 solid block char $FD (253) in yellow (7)
+  var fillLevel=Math.min(7,Math.floor(s.korn/2500));
   for(var r=12;r>=13-fillLevel;r--){
-    for(var c=3;c<11;c++) poke(c,r,160,7); // filled = yellow block char
+    for(var c=3;c<11;c++) poke(c,r,253,7); // solid block, yellow
   }
   // Stats
   print(15,4,'STATISTIK',1);
@@ -589,7 +590,85 @@ function showBild3Steuern(sp,s){
   document.getElementById('bJustiz').addEventListener('click',function(){
     menuSelect('JUSTIZ',[{label:'SEHR FAIR',idx:0},{label:'BESCHEIDEN',idx:1},{label:'HART',idx:2},{label:'GIERIG',idx:3}],function(item){doAktion('justiz_aendern',{stufe:item.idx}).then(render);});
   });
-  document.getElementById('bWeiter4').addEventListener('click',function(){state.bildStep=5;render();});
+  document.getElementById('bWeiter4').addEventListener('click',function(){state.bildStep=4;render();});
+}
+
+// === BILD 4: LANDKARTE (Map with C64 graphics) ===
+function showBild4Karte(sp,s){
+  // Map screen: brown background, green borders, C64 building graphics
+  renderer.regs.border=14; // light blue border
+  renderer.regs.bg=9; // BROWN background (C64 color 9) - authentic Kaiser map!
+  clr(9);
+  
+  // Header (black bar)
+  fillRect(0,0,40,3,0);
+  printCenter(0,'KAISER',7);
+  print(2,1,'WIR SCHREIBEN DAS JAHR '+sp.jahr,1);
+  print(2,2,(s.titel||'HERR')+' '+s.name+' VON '+s.staat.toUpperCase(),1);
+  
+  // Draw territory borders (green lines like original)
+  // Horizontal green lines
+  for(var c=1;c<39;c++){ poke(c,4,110,13); poke(c,21,110,13); }
+  // Vertical green lines
+  for(var r=4;r<22;r++){ poke(0,r,124,13); poke(39,r,124,13); }
+  
+  // Draw buildings using authentic C64 charset characters
+  // Markets: char $63 (99) = house icon, yellow (7)
+  var mx=3, my=6;
+  for(var i=0;i<s.maerkte && i<5;i++){
+    poke(mx+i*2, my, 99, 7); // house/market char in yellow
+  }
+  
+  // Mills: char $7D (125) = diamond/mill icon, blue (6)
+  var mllX=3, mllY=9;
+  for(var i=0;i<s.muehlen && i<5;i++){
+    poke(mllX+i*2, mllY, 125, 6); // mill/diamond char in blue
+  }
+  
+  // Trees: char $67 (103) = tree icon, green (5)
+  var trees = Math.min(8, Math.floor(s.land/2000));
+  for(var i=0;i<trees;i++){
+    var tx = 20 + (i%4)*3;
+    var ty = 8 + Math.floor(i/4)*3;
+    poke(tx, ty, 103, 5); // tree char in green
+  }
+  
+  // Palace: char $6B (107) = palace icon, yellow (7)
+  if(s.palast_teile > 0){
+    poke(28, 14, 107, 7); // palace
+    poke(29, 14, 107, 7); // palace wide
+    // Show progress
+    print(26,16,'PALAST '+s.palast_teile+'/16',7);
+  }
+  
+  // Cathedral: char $6F (111) = cathedral icon, yellow (7)
+  if(s.kathedrale_teile > 0){
+    poke(6, 16, 111, 7); // cathedral
+    poke(7, 16, 111, 7);
+    print(4,18,'KATHED. '+s.kathedrale_teile+'/14',7);
+  }
+  
+  // Cities: char $76 (118) = house with roof, red (2)
+  if(s.staedte > 0){
+    for(var i=0;i<s.staedte;i++){
+      poke(15+i*3, 12, 118, 2); // house with roof in red
+    }
+  }
+  
+  // Status bar at bottom
+  fillRect(0,22,40,3,6); // blue status bar
+  print(2,23,'EINW:'+fmtNum(s.einwohner),1);
+  print(14,23,'LAND:'+fmtNum(s.land),13);
+  print(26,23,'GELD:'+fmtNum(s.geld),7);
+  
+  printCenter(24,'JOYSTICK BEWEGEN ODER KNOPF',13);
+  
+  renderScreen();
+  infoEl.textContent='BILD 4 - LANDKARTE | Weiter zum Bauen';
+  navEl.innerHTML='<button id="bKarteWeiter">WEITER ZU BAUEN &gt;</button>';
+  document.getElementById('bKarteWeiter').addEventListener('click',function(){
+    state.bildStep=5;render();
+  });
 }
 
 // === BILD 5: BAUEN ===
@@ -703,6 +782,11 @@ function showBefoerderung(bef,sp){
   printCenter(8,'SIE SIND NUN',1);
   printCenter(10,bef.titel.toUpperCase()+' '+s.name,7);
   printCenter(11,'VON '+s.staat.toUpperCase()+' !',7);
+  // Draw castle using C64 charset: $6B (107) = palace
+  poke(15,13,107,1); poke(16,13,107,1); poke(17,13,107,1);
+  poke(14,14,107,1); poke(18,14,107,1);
+  poke(14,15,112,1); poke(15,15,112,1); poke(16,15,112,1);
+  poke(17,15,112,1); poke(18,15,112,1);
   renderScreen();
   infoEl.textContent='BEFOERDERUNG! '+bef.titel;
   navEl.innerHTML='<button id="bBW">WEITER &gt;</button>';
@@ -742,6 +826,7 @@ function render(){
     case 1: showBild1KornAusgabe(sp,ich);break;
     case 2: showBild2Statistik(sp,ich);break;
     case 3: showBild3Steuern(sp,ich);break;
+    case 4: showBild4Karte(sp,ich);break;
     case 5: showBild5Ausgaben(sp,ich);break;
     default: state.bildStep=0; showBild1Handel(sp,ich);
   }
