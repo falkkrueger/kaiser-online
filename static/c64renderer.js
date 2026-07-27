@@ -22,9 +22,9 @@ class C64Renderer {
     this.charH = 8;
     
     // Scale up for crisp pixels
-    this.scale = 4;
-    canvas.width = this.cols * this.charW * this.scale;
-    canvas.height = this.rows * this.charH * this.scale;
+    this.scale = 8; // Higher scale = sharper pixels when CSS shrinks
+    canvas.width = this.cols * this.charW * this.scale;  // 40*8*8 = 2560
+    canvas.height = this.rows * this.charH * this.scale; // 25*8*8 = 1600
     this.ctx.imageSmoothingEnabled = false;
     
     // VIC-II registers (defaults from Kaiser init)
