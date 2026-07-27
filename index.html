@@ -270,9 +270,14 @@ function connectWS(){
 function doAktion(aktion, parameter){
   return apiCall('/api/spiel/'+state.spiel_id+'/aktion','POST',{aktion:aktion, parameter:parameter||{}})
     .then(function(res){
+      // Always fetch fresh state after action
       return apiCall('/api/spiel/'+state.spiel_id).then(function(stand){
-        state.spielstand=stand; return res;
-      }).catch(function(){ return res; });
+        state.spielstand = stand;
+        return res;
+      }).catch(function(){
+        // If fetch fails, at least use the action result
+        return res;
+      });
     });
 }
 
@@ -835,11 +840,13 @@ function showBefoerderung(bef,sp){
   printCenter(10, titel.toUpperCase(),1);  // white on green = readable
   printCenter(11, s.name.toUpperCase(),7); // yellow on green = readable
   printCenter(12, 'VON '+s.staat.toUpperCase(),7);
-  // Draw castle using C64 charset: $6B (107) = palace
-  poke(15,14,107,1); poke(16,14,107,1); poke(17,14,107,1);
-  poke(14,15,107,1); poke(18,15,107,1);
-  poke(14,16,112,1); poke(15,16,112,1); poke(16,16,112,1);
-  poke(17,16,112,1); poke(18,16,112,1);
+  // Castle graphic using C64 charset - use $63 (house) and $76 (house with roof)
+  // Row 14: towers
+  poke(14,14,118,1); poke(15,14,107,1); poke(16,14,107,1); poke(17,14,107,1); poke(18,14,118,1);
+  // Row 15: walls
+  poke(14,15,101,1); poke(15,15,101,1); poke(16,15,101,1); poke(17,15,101,1); poke(18,15,101,1);
+  // Row 16: base
+  poke(14,16,253,1); poke(15,16,253,1); poke(16,16,253,1); poke(17,16,253,1); poke(18,16,253,1);
   renderScreen();
   infoEl.textContent='BEFOERDERUNG! '+titel;
   navEl.innerHTML='<button id="bBW">WEITER &gt;</button>';
