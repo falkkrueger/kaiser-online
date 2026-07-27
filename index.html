@@ -16,25 +16,23 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:#000;font-family:'Press Start 2P',monospace}
-body{display:flex;flex-direction:column;align-items:center;justify-content:center}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation}
 
 .c64-border{
   background:var(--c64-light-blue);
   padding:1vmin;border-radius:4px;
   display:flex;flex-direction:column;
-  width:100vw;max-width:100vw;max-height:100vh;
+  max-width:100vw;max-height:100vh;
   box-sizing:border-box;
 }
-/* Canvas - must leave room for info + nav buttons below */
+/* Canvas - sized to leave FIXED space for buttons */
 .c64-canvas-wrap{
   position:relative;
-  flex:1 1 auto;
-  min-height:0;
-  /* Use width-based sizing, not viewport height, to leave room for buttons */
+  flex:0 0 auto;
   width:100%;
-  max-width:100%;
+  max-width:100vw;
   aspect-ratio:320/200;
-  max-height:calc(100vh - 70px - 2vmin);
+  max-height:calc(100vh - 90px);
 }
 #c64canvas{
   width:100%;height:100%;
@@ -44,8 +42,9 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
   display:block;cursor:pointer;
 }
 
-.c64-info{color:var(--c64-light-grey);font-size:calc(min(1.0vw,0.9vh));
-  text-align:center;margin-top:6px;font-family:'Press Start 2P',monospace;padding:4px}
+.c64-info{color:var(--c64-light-grey);font-size:8px;
+  text-align:center;margin:2px 0;font-family:'Press Start 2P',monospace;padding:2px;
+  flex:0 0 auto}
 
 .c64-modal{
   position:absolute;top:0;left:0;width:100%;height:100%;
@@ -54,17 +53,48 @@ body{display:flex;flex-direction:column;align-items:center;justify-content:cente
 }
 .c64-modal-inner{
   background:var(--c64-blue);border:2px solid var(--c64-light-blue);
-  padding:16px;border-radius:4px;max-width:90%;max-height:90%;overflow:auto;
+  padding:12px;border-radius:4px;max-width:90%;max-height:80%;overflow:auto;
 }
 .c64-modal-inner input{
   font-family:'Press Start 2P',monospace;font-size:12px;
-  padding:8px;margin:8px 0;width:100%;background:#000;color:var(--c64-light-green);
-  border:1px solid var(--c64-light-blue);text-transform:uppercase;letter-spacing:2px;
+  padding:8px;margin:6px 0;width:100%;background:#000;color:var(--c64-light-green);
+  border:1px solid var(--c64-light-blue);
 }
 .c64-modal-inner select{
   font-family:'Press Start 2P',monospace;font-size:10px;
   padding:6px;width:100%;background:#000;color:var(--c64-light-green);
   border:1px solid var(--c64-light-blue);
+}
+.c64-modal-inner button{
+  font-family:'Press Start 2P',monospace;font-size:10px;
+  background:var(--c64-light-blue);color:var(--c64-blue);
+  border:none;padding:10px 16px;border-radius:4px;cursor:pointer;margin:4px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  min-height:40px;
+}
+.c64-modal-inner button:active{background:var(--c64-white)}
+.c64-modal-title{color:var(--c64-yellow);font-size:10px;margin-bottom:8px;text-align:center}
+.c64-modal-label{color:var(--c64-cyan);font-size:8px;margin-top:6px}
+
+.c64-keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:6px 0}
+.c64-keypad button{
+  font-family:'Press Start 2P',monospace;font-size:10px;
+  background:var(--c64-dark-grey);color:var(--c64-light-green);
+  border:1px solid var(--c64-light-blue);padding:10px 4px;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  min-height:36px;
+}
+.c64-keypad button:active{background:var(--c64-light-blue);color:var(--c64-blue)}
+.c64-keypad-wide{grid-column:span 2}
+
+.c64-nav{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;flex:0 0 auto;padding:4px 0}
+.c64-nav button{
+  font-family:'Press Start 2P',monospace;font-size:10px;
+  background:var(--c64-light-blue);color:var(--c64-blue);border:none;
+  padding:12px 16px;border-radius:4px;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+  min-height:44px;min-width:100px;
+}
 }
 .c64-modal-inner button{
   font-family:'Press Start 2P',monospace;font-size:10px;
