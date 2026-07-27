@@ -827,11 +827,11 @@ function showBefoerderung(bef,sp){
   printCenter(5,'IHNEN WIRD EIN NEUER',1);
   printCenter(6,'TITEL VERLIEHEN !',1);
   printCenter(8,'SIE SIND NUN',1);
-  // Title in yellow, name+state in white - split if too long
+  // Title in white on green bg, name+state in yellow - split into 3 lines for readability
   var titel = bef.titel || '';
-  printCenter(10, titel.toUpperCase(),7);
-  printCenter(11, s.name.toUpperCase(),1);
-  printCenter(12, 'VON '+s.staat.toUpperCase(),1);
+  printCenter(10, titel.toUpperCase(),1);  // white on green = readable
+  printCenter(11, s.name.toUpperCase(),7); // yellow on green = readable
+  printCenter(12, 'VON '+s.staat.toUpperCase(),7);
   // Draw castle using C64 charset: $6B (107) = palace
   poke(15,14,107,1); poke(16,14,107,1); poke(17,14,107,1);
   poke(14,15,107,1); poke(18,15,107,1);
