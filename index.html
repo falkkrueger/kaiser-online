@@ -508,17 +508,23 @@ function showBild1Handel(sp,s){
     for(var c=3;c<11;c++) poke(c,r,253,7); // solid block, yellow
   }
   // Stats
-  print(15,4,'STATISTIK',1);
   var noetig=Math.floor(s.einwohner*17);
-  print(15,5,'Korn:  '+fmtNum(s.korn),13);
-  print(15,6,'Noetig:'+fmtNum(noetig),10);
-  print(15,7,'Land:  '+fmtNum(s.land),13);
-  print(15,8,'Bebaut:'+fmtNum(s.land_bebaut),7);
-  print(15,9,'Geld:  '+fmtNum(s.geld),13);
-  print(15,10,'Einw.:   '+fmtNum(s.einwohner),1);
-  print(15,11,'Staedte:   '+s.staedte,1);
-  print(15,12,'Maerkte:   '+s.maerkte,1);
-  print(15,13,'Muehlen:   '+s.muehlen,1);
+  print(15,4,'STATISTIK',1);
+  // Labels left-aligned at col 15, numbers right-aligned at col 38
+  function printStat(row, label, val, color){
+    print(15, row, label, color);
+    var numStr = fmtNum(val);
+    print(39 - numStr.length, row, numStr, color);
+  }
+  printStat(5,'Korn:',s.korn,13);
+  printStat(6,'Noetig:',noetig,10);
+  printStat(7,'Land:',s.land,13);
+  printStat(8,'Bebaut:',s.land_bebaut,7);
+  printStat(9,'Geld:',s.geld,13);
+  printStat(10,'Einw.:',s.einwohner,1);
+  printStat(11,'Staedte:',s.staedte,1);
+  printStat(12,'Maerkte:',s.maerkte,1);
+  printStat(13,'Muehlen:',s.muehlen,1);
   // Menu
   print(2,16,'KORN KAUFEN',1);
   print(2,17,'KORN VERKAUFEN',1);
@@ -821,15 +827,18 @@ function showBefoerderung(bef,sp){
   printCenter(5,'IHNEN WIRD EIN NEUER',1);
   printCenter(6,'TITEL VERLIEHEN !',1);
   printCenter(8,'SIE SIND NUN',1);
-  printCenter(10,bef.titel.toUpperCase()+' '+s.name,7);
-  printCenter(11,'VON '+s.staat.toUpperCase()+' !',7);
+  // Title in yellow, name+state in white - split if too long
+  var titel = bef.titel || '';
+  printCenter(10, titel.toUpperCase(),7);
+  printCenter(11, s.name.toUpperCase(),1);
+  printCenter(12, 'VON '+s.staat.toUpperCase(),1);
   // Draw castle using C64 charset: $6B (107) = palace
-  poke(15,13,107,1); poke(16,13,107,1); poke(17,13,107,1);
-  poke(14,14,107,1); poke(18,14,107,1);
-  poke(14,15,112,1); poke(15,15,112,1); poke(16,15,112,1);
-  poke(17,15,112,1); poke(18,15,112,1);
+  poke(15,14,107,1); poke(16,14,107,1); poke(17,14,107,1);
+  poke(14,15,107,1); poke(18,15,107,1);
+  poke(14,16,112,1); poke(15,16,112,1); poke(16,16,112,1);
+  poke(17,16,112,1); poke(18,16,112,1);
   renderScreen();
-  infoEl.textContent='BEFOERDERUNG! '+bef.titel;
+  infoEl.textContent='BEFOERDERUNG! '+titel;
   navEl.innerHTML='<button id="bBW">WEITER &gt;</button>';
   document.getElementById('bBW').addEventListener('click',function(){state.bildStep=0;render();});
 }
