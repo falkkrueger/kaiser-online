@@ -1,0 +1,14 @@
+{
+  "name": "kaiser-online",
+  "version": "2.0.0",
+  "description": "Kaiser (Ariolasoft 1984, C64) – das Original, emuliert, online mit Freunden spielbar",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "fetch-roms": "sh scripts/fetch-roms.sh",
+    "test": "node scripts/selftest.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "ws": "^8.18.0" }
+}

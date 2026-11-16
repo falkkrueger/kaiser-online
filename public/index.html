@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#352879">
+<title>Kaiser Online</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <span class="c64t" data-t="KAISER ONLINE" data-fg="7"></span>
+    <span id="roomInfo" class="c64t" data-fg="15"></span>
+    <span class="spacer"></span>
+    <button id="btnSound" class="c64btn" data-t="TON AUS"></button>
+    <button id="btnMenu" class="c64btn" data-t="MENUE"></button>
+  </header>
+
+  <div id="turnBanner" hidden></div>
+
+  <main id="main">
+    <div id="screenWrap">
+      <canvas id="screen" width="384" height="272"></canvas>
+      <canvas id="overlay" width="384" height="272"></canvas>
+      <div id="denyMsg" hidden></div>
+    </div>
+
+    <aside id="panel">
+      <div id="whoBox" class="box"></div>
+
+      <div id="numBox" class="box" hidden>
+        <div class="c64t" data-t="ZAHL EINGEBEN:" data-fg="7"></div>
+        <div id="numDisplay"></div>
+        <div id="numPad"></div>
+      </div>
+
+      <div class="box" id="padBox">
+        <div id="dpad">
+          <button class="dir c64btn" data-dir="up" data-t="▲"></button>
+          <button class="dir c64btn" data-dir="left" data-t="◀"></button>
+          <button id="fire" class="c64btn" data-t="FEUER"></button>
+          <button class="dir c64btn" data-dir="right" data-t="▶"></button>
+          <button class="dir c64btn" data-dir="down" data-t="▼"></button>
+        </div>
+        <div class="row">
+          <button id="btnKbd" class="c64btn" data-t="TASTATUR"></button>
+          <button id="btnF1" class="c64btn" data-t="F1 SPEICHERN"></button>
+        </div>
+      </div>
+
+      <div id="kbd" class="box" hidden></div>
+    </aside>
+  </main>
+
+  <div id="menu" class="modal" hidden>
+    <div class="box modalBox">
+      <div class="c64t" data-t="EINSTELLUNGEN" data-fg="7"></div>
+      <label class="line"><span class="c64t" data-t="DEIN NAME:"></span><input id="nickIn" maxlength="20"></label>
+      <div class="line"><button id="btnShare" class="c64btn" data-t="LINK KOPIEREN"></button><span id="shareOk" class="c64t" data-fg="13"></span></div>
+      <label class="line"><input type="checkbox" id="chkFree"> <span class="c64t" data-t="ALLE DUERFEN STEUERN"></span></label>
+      <label class="line"><input type="checkbox" id="chkPause"> <span class="c64t" data-t="WARTEN WENN SPIELER AM ZUG OFFLINE"></span></label>
+      <label class="line" id="tgLine" hidden><span class="c64t" data-t="TELEGRAM CHAT-ID:"></span><input id="tgIn" maxlength="32" placeholder="z.B. 123456789"></label>
+      <label class="line"><input type="checkbox" id="chkNotify"> <span class="c64t" data-t="BENACHRICHTIGEN WENN ICH DRAN BIN"></span></label>
+      <div class="line"><span class="c64t" data-t="TEMPO:"></span>
+        <button class="c64btn speed" data-v="1" data-t="1X"></button><button class="c64btn speed" data-v="2" data-t="2X"></button><button class="c64btn speed" data-v="4" data-t="4X"></button></div>
+      <div class="line"><button id="btnReset" class="c64btn danger" data-t="C64 NEU STARTEN"></button></div>
+      <div class="help">
+        <p><b>Steuerung:</b> Menüpunkte und Ziffern direkt anklicken, oder das Joystick-Kreuz benutzen.
+          Tastatur: Pfeiltasten = Joystick, Leertaste/Enter = Feuer, Ziffern + Enter bei Zahleneingaben.</p>
+        <p><b>Mehrspieler:</b> Wie früher am Brotkasten – alle sehen denselben C64. Jeder markiert
+          oben „Das bin ich“ bei seinem Herrscher; dann kann nur steuern, wer gerade dran ist.</p>
+        <p><b>Zeitfaktor:</b> Wie im Original kostet ein Zug, der länger als ca. 1:20 Minuten dauert, Lebensjahre.
+          Ist der Spieler am Zug nicht online, hält der C64 an, bis er wiederkommt.</p>
+        <p><b>Speichern:</b> Der Server sichert automatisch. Zusätzlich funktioniert das Original-Speichern
+          (F1 halten beim Zugende) auf die virtuelle Diskette.</p>
+      </div>
+      <div class="line"><button id="btnClose" class="c64btn" data-t="ZURUECK"></button></div>
+    </div>
+  </div>
+</div>
+<script src="client.js" type="module"></script>
+</body>
+</html>

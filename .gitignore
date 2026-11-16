@@ -1,6 +1,8 @@
-__pycache__/
-*.pyc
-*.pyo
-/tmp/
+node_modules/
+data/
+# Original-Diskette und C64-ROMs sind urheberrechtlich geschützt -> nicht ins Repo
+media/*.d64
+media/roms/
+media/*.bas
 *.log
 .env

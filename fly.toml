@@ -1,7 +1,17 @@
+kill_signal = "SIGINT"
+kill_timeout = "10s"
+
+[env]
+KAISER_DATA = "/data"
+
+[[mounts]]
+source = "kaiser_data"
+destination = "/data"
+
 [http_service]
 internal_port = 8080
 force_https = true
-auto_stop_machines = true
+auto_stop_machines = "stop"
 auto_start_machines = true
 min_machines_running = 0
 
@@ -10,4 +20,4 @@ interval = "30s"
 timeout = "5s"
 grace_period = "10s"
 method = "GET"
-path = "/api/staaten"
+path = "/health"
