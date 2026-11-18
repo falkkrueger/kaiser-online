@@ -79,3 +79,9 @@ canvas.txt { image-rendering: pixelated; image-rendering: crisp-edges; --h: 16px
   #panel { grid-template-columns: 1fr; }
   #dpad { grid-template-rows: repeat(3, 56px); }
 }
+
+#setup { position: absolute; inset: 0; background: var(--c64-blue); border: 32px solid var(--c64-lblue); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 12px; overflow: auto; }
+#setupText { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+#setupText canvas.txt { --h: 14px; }
+#setupDisk .c64btn { cursor: pointer; }
+@media (max-width: 520px) { #setup { border-width: 12px; } #setupText canvas.txt { --h: 10px; } }

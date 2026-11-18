@@ -1,3 +1,4 @@
+import { toB64, fromB64 } from './b64.js';
 // Virtual 1541 (device 8) at KERNAL serial-bus level, backed by a .d64 image.
 // Written files go to an overlay (the original image is never modified).
 
@@ -253,10 +254,10 @@ export class VirtualDrive {
   untalk() { this.mode = null; return 0; }
 
   saveState() {
-    return { overlay: [...this.overlay].map(([k, f]) => [k, f.type, Buffer.from(f.data).toString('base64')]), deleted: [...this.deleted] };
+    return { overlay: [...this.overlay].map(([k, f]) => [k, f.type, toB64(f.data)]), deleted: [...this.deleted] };
   }
   loadState(s) {
-    this.overlay = new Map((s.overlay || []).map(([k, t, d]) => [k, { type: t, data: new Uint8Array(Buffer.from(d, 'base64')) }]));
+    this.overlay = new Map((s.overlay || []).map(([k, t, d]) => [k, { type: t, data: fromB64(d) }]));
     this.deleted = new Set(s.deleted || []);
     this.reset(); this.setStatus(0, ' OK');
   }

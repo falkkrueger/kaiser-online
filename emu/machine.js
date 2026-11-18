@@ -1,19 +1,8 @@
-// Builds a C64 with ROMs + virtual drive and autostarts the disk.
-import fs from 'node:fs';
-import path from 'node:path';
+// Builds a C64 with ROMs + virtual drive and autostarts the disk (platform neutral).
 import { C64 } from './c64.js';
 import { VirtualDrive } from './drive.js';
 
-export function loadMedia(dir) {
-  const rd = (f) => new Uint8Array(fs.readFileSync(path.join(dir, f)));
-  const romDir = 'roms';
-  return {
-    kernal: rd(path.join(romDir, 'kernal-901227-03.bin')),
-    basic: rd(path.join(romDir, 'basic-901226-01.bin')),
-    chargen: rd(path.join(romDir, 'chargen-901225-01.bin')),
-    disk: rd('kaiser.d64'),
-  };
-}
+export const ROM_FILES = { kernal: 'kernal-901227-03.bin', basic: 'basic-901226-01.bin', chargen: 'chargen-901225-01.bin' };
 
 export function createMachine(media) {
   const c64 = new C64(media);

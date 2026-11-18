@@ -12,7 +12,9 @@
   <header id="top">
     <span class="c64t" data-t="KAISER ONLINE" data-fg="7"></span>
     <span id="roomInfo" class="c64t" data-fg="15"></span>
+    <span id="netInfo" class="c64t"></span>
     <span class="spacer"></span>
+    <button id="btnInvite" class="c64btn" data-t="MITSPIELER EINLADEN" hidden></button>
     <button id="btnSound" class="c64btn" data-t="TON AUS"></button>
     <button id="btnMenu" class="c64btn" data-t="MENUE"></button>
   </header>
@@ -24,6 +26,13 @@
       <canvas id="screen" width="384" height="272"></canvas>
       <canvas id="overlay" width="384" height="272"></canvas>
       <div id="denyMsg" hidden></div>
+      <div id="setup" hidden>
+        <div id="setupText"></div>
+        <div id="setupDisk" hidden>
+          <label class="c64btn" for="diskFile"><span class="c64t" data-t="DISKETTE WAEHLEN (.D64)" data-fg="1"></span></label>
+          <input type="file" id="diskFile" accept=".d64,.D64,application/octet-stream" hidden>
+        </div>
+      </div>
     </div>
 
     <aside id="panel">
@@ -64,6 +73,9 @@
       <label class="line"><input type="checkbox" id="chkNotify"> <span class="c64t" data-t="BENACHRICHTIGEN WENN ICH DRAN BIN"></span></label>
       <div class="line"><span class="c64t" data-t="TEMPO:"></span>
         <button class="c64btn speed" data-v="1" data-t="1X"></button><button class="c64btn speed" data-v="2" data-t="2X"></button><button class="c64btn speed" data-v="4" data-t="4X"></button></div>
+      <div class="line hostOnly" hidden><button id="btnExport" class="c64btn" data-t="SPIELSTAND SICHERN"></button><button id="btnImport" class="c64btn" data-t="SPIELSTAND LADEN"></button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden></div>
+      <div class="line hostOnly" hidden><button id="btnDisk" class="c64btn" data-t="ANDERE DISKETTE"></button></div>
       <div class="line"><button id="btnReset" class="c64btn danger" data-t="C64 NEU STARTEN"></button></div>
       <div class="help">
         <p><b>Steuerung:</b> Menüpunkte und Ziffern direkt anklicken, oder das Joystick-Kreuz benutzen.
@@ -72,7 +84,9 @@
           oben „Das bin ich“ bei seinem Herrscher; dann kann nur steuern, wer gerade dran ist.</p>
         <p><b>Zeitfaktor:</b> Wie im Original kostet ein Zug, der länger als ca. 1:20 Minuten dauert, Lebensjahre.
           Ist der Spieler am Zug nicht online, hält der C64 an, bis er wiederkommt.</p>
-        <p><b>Speichern:</b> Der Server sichert automatisch. Zusätzlich funktioniert das Original-Speichern
+        <p><b>Ohne Server:</b> Auf GitHub Pages ist der Erste der Gastgeber – der C64 läuft in seinem Browser,
+          die anderen verbinden sich über den Link direkt mit ihm. Der Tab des Gastgebers muss offen bleiben.</p>
+        <p><b>Speichern:</b> Der Spielstand wird automatisch gesichert (beim Gastgeber im Browser). Zusätzlich funktioniert das Original-Speichern
           (F1 halten beim Zugende) auf die virtuelle Diskette.</p>
       </div>
       <div class="line"><button id="btnClose" class="c64btn" data-t="ZURUECK"></button></div>

@@ -3,7 +3,7 @@
 **Kaiser** (Ariolasoft 1984, Claudio Kronmüller & Dirk Beyelstein) – das *echte* C64-Original,
 online mit Freunden spielbar.
 
-Hier wird nichts nachprogrammiert. Der Server emuliert einen Commodore 64 und startet darauf die
+Hier wird nichts nachprogrammiert. Ein Commodore 64 wird emuliert und startet darauf die
 Original-Diskette, also das unveränderte BASIC-Programm mit seinen Maschinencode-Routinen. Alle
 Formeln, Zufälle, Bugs und Geräusche sind deshalb exakt wie 1984. Alle Mitspieler sehen denselben
 C64, wie früher am Brotkasten, nur übers Internet.
@@ -19,16 +19,40 @@ C64, wie früher am Brotkasten, nur übers Internet.
   - Steuerkreuz + Feuerknopf (lang drücken = halten, z. B. zum Scrollen des Schlachtfelds)
   - Tastatur: Pfeiltasten = Joystick, Leertaste/Enter = Feuer, Buchstaben für Namen, F1 = Spielstand auf Diskette
 - **Mehrspieler (Hotseat online)**: Jeder klickt bei seinem Herrscher auf „Das bin ich“. Dann kann nur
-  steuern, wer laut Programm gerade dran ist. Der Server liest dafür die BASIC-Variablen des laufenden
+  steuern, wer laut Programm gerade dran ist. Dafür werden die BASIC-Variablen des laufenden
   Originals (`C` = aktueller Spieler, im Gefecht `I`/`H` für Angreifer und Verteidiger).
 - **Zeitfaktor des Originals bleibt erhalten** (ein Zug über ca. 1:20 min kostet Lebensjahre). Ist der Spieler am
   Zug offline, hält der C64 an, bis er wiederkommt (abschaltbar im Menü).
-- „Du bist dran“ als Signalton und Browser-Benachrichtigung, optional per Telegram
-- Mehrere Räume über `?room=name`. Der Spielstand (komplette Maschine) wird automatisch gesichert und übersteht Neustarts.
+- „Du bist dran“ als Signalton und Browser-Benachrichtigung (im Server-Modus auch per Telegram)
+- Der Spielstand (komplette Maschine) wird automatisch gesichert und übersteht Neuladen und Neustarts.
 
-## Einrichtung
+## Spielen – direkt im Browser (GitHub Pages)
 
-Die Diskette und die C64-ROMs sind urheberrechtlich geschützt und liegen deshalb **nicht** im Repository.
+Es ist kein Server nötig. Der C64 läuft im Browser des **Gastgebers**, die Mitspieler verbinden sich direkt mit ihm (WebRTC).
+
+1. **Gastgeber** öffnet `https://falkkrueger.github.io/kaiser-online/` und wählt einmalig die eigene
+   Kaiser-Diskette (`Kaiser_Ariolasoft_1984_German_ASS.d64`). Sie bleibt nur im eigenen Browser
+   gespeichert und wird nirgends hochgeladen. Die C64-ROMs lädt die Seite automatisch aus dem VICE-Projekt.
+2. Oben auf **„Mitspieler einladen“** klicken und den kopierten Link an die Freunde schicken.
+3. Jeder klickt rechts bei seinem Herrscher auf **„Das bin ich“**.
+
+Gut zu wissen:
+- Der Tab des Gastgebers muss offen bleiben, solange gespielt wird. Er darf aber im Hintergrund liegen.
+- Der Spielstand wird laufend im Browser des Gastgebers gespeichert. Seite neu laden, Rechner neu
+  starten oder morgen weiterspielen geht ohne Verlust; der Einladungslink bleibt derselbe.
+- Unter **Menü → Spielstand sichern/laden** lässt sich der Stand als Datei sichern, z. B. um den
+  Gastgeber zu wechseln.
+- Für den Verbindungsaufbau wird der kostenlose PeerJS-Vermittlungsdienst benutzt, die Spieldaten
+  laufen direkt zwischen den Browsern. In sehr restriktiven Netzen (manche Firmen- oder Mobilfunknetze)
+  kann der direkte Verbindungsaufbau scheitern.
+
+**Einmalig einrichten:** Im Repository unter *Settings → Pages* als Quelle den Branch mit diesem Code und
+den Ordner `/ (root)` wählen.
+
+## Optional: eigener Server
+
+Statt im Browser des Gastgebers kann der C64 auch auf einem Server laufen. Dann muss niemand
+einen Tab offen halten, und Telegram-Benachrichtigungen sind möglich.
 
 ```bash
 npm install
@@ -38,8 +62,7 @@ npm install
 npm run fetch-roms
 ```
 
-Danach das Disk-Image nach `media/kaiser.d64` kopieren. Getestet ist
-`Kaiser_Ariolasoft_1984_German_ASS.d64`, siehe [docs/ANALYSE.md](docs/ANALYSE.md) zur Versionswahl.
+Danach die Diskette nach `media/kaiser.d64` kopieren.
 
 ```bash
 npm test
@@ -49,8 +72,7 @@ npm test
 npm start
 ```
 
-Dann im Browser `http://localhost:8080/?room=meinspiel` öffnen und den Link (Menü → „Link kopieren“)
-an die Mitspieler schicken.
+Dann im Browser `http://localhost:8080/?room=meinspiel` öffnen.
 
 ### Umgebungsvariablen
 
@@ -85,5 +107,7 @@ fly deploy
 | `emu/input.js` | Tastaturmatrix + Joystick-Impulse, die gehalten werden, bis das Programm sie gelesen hat |
 | `emu/kaiser.js` | Spielwissen: welches Menü gerade aktiv ist, wer steuern darf, Klick → Joystick-Folge |
 | `emu/listing.js`, `scripts/listing.mjs` | BASIC-Listing des Originals aus dem Speicher ziehen (`node scripts/listing.mjs` → `media/kaiser.bas`) |
-| `server.js` | HTTP + WebSocket, Räume, Echtzeit-Takt (50,125 Hz PAL), Bild-Diffs, Sound-Events, Rechte |
+| `emu/room.js` | Ein Spieltisch: Echtzeit-Takt (50,125 Hz PAL), Bild-Diffs, Sound-Events, Plätze und Rechte (Server und Browser) |
+| `server.js` | optionaler Server-Modus (HTTP + WebSocket) |
+| `public/p2p.js`, `public/host-worker.js` | Browser-Modus: Gastgeber-Worker, WebRTC, Diskette/ROMs/Spielstand in IndexedDB |
 | `public/` | Browser-Client (Canvas, C64-Zeichensatz für die Oberfläche, SID-Worklet) |

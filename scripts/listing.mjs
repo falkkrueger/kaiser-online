@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadMedia, createMachine, autostart } from '../emu/machine.js';
+import { createMachine, autostart } from '../emu/machine.js';
+import { loadMedia } from '../emu/media-node.js';
 import { InputScheduler } from '../emu/input.js';
 import { listBasic } from '../emu/listing.js';
 

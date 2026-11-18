@@ -1,5 +1,6 @@
 // Commodore 64 (PAL) machine: memory map, VIC-II (line based), 2x CIA 6526, SID register file.
 import { CPU } from './cpu6502.js';
+import { toB64, fromB64 } from './b64.js';
 
 export const FB_W = 384, FB_H = 272;
 const FIRST_LINE = 16;               // raster line shown at framebuffer row 0
@@ -448,14 +449,14 @@ export class C64 {
   // ----- snapshots -----
   saveState() {
     return {
-      ram: Buffer.from(this.ram).toString('base64'), color: Buffer.from(this.color).toString('base64'),
+      ram: toB64(this.ram), color: toB64(this.color),
       vic: Array.from(this.vic), sid: Array.from(this.sid), rasterCmp: this.rasterCmp, irqSrc: this.irqSrc,
       cpu: this.cpu.save(), cia1: this.cia1.save(), cia2: this.cia2.save(), frame: this.frame,
       drive: this.drive ? this.drive.saveState() : null,
     };
   }
   loadState(s) {
-    this.ram.set(Buffer.from(s.ram, 'base64')); this.color.set(Buffer.from(s.color, 'base64'));
+    this.ram.set(fromB64(s.ram)); this.color.set(fromB64(s.color));
     this.vic.set(s.vic); this.sid.set(s.sid); this.rasterCmp = s.rasterCmp;
     this.cpu.load(s.cpu); this.cia1.load(s.cia1); this.cia2.load(s.cia2); this.frame = s.frame;
     this.irqSrc = s.irqSrc; this.cpu.irqLine = this.irqSrc;

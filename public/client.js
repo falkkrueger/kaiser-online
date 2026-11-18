@@ -1,4 +1,6 @@
-// Kaiser Online – browser client. Shows the server-side C64, sends clicks/joystick/keys.
+// Kaiser Online – browser client. Shows the C64 (running on a server, in this browser's worker,
+// or in a friend's browser), sends clicks/joystick/keys.
+import { startHost, startGuest, loadRoms, checkDisk, idbGet, idbSet } from './p2p.js';
 
 const PALETTE = [0x000000, 0xffffff, 0x813338, 0x75cec8, 0x8e3c97, 0x56ac4d, 0x2e2c9b, 0xedf171,
   0x8e5029, 0x553800, 0xc46c71, 0x4a4a4a, 0x7b7b7b, 0xa9ff9f, 0x706deb, 0xb2b2b2];
@@ -9,7 +11,9 @@ const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
 const room = (params.get('room') || 'kaiser').toLowerCase();
 let nick = localStorage.getItem('kaiser.nick') || '';
-let status = null, ws = null, audio = null;
+let status = null, transport = null, audio = null;
+let mode = 'server';            // 'server' (Node/WebSocket) | 'host' | 'guest' (GitHub Pages, WebRTC)
+const hostId = params.get('join');
 
 // ---------------------------------------------------------------- C64 font
 let charset = null;
@@ -47,6 +51,12 @@ function textCanvas(text, fg = 14, bg = null) {
 }
 function setText(el, text, fg) { el.replaceChildren(textCanvas(text, fg ?? (+el.dataset.fg || 14))); }
 function paintStatic() { document.querySelectorAll('[data-t]').forEach(el => setText(el, el.dataset.t)); }
+function repaintAll() {
+  paintStatic();
+  $('#numPad').replaceChildren(); $('#kbd').replaceChildren(); buildNumPad(); buildKbd();
+  if (status) onStatus(status);
+  if (audio) setText($('#btnSound'), 'TON AN', 1);
+}
 
 // ---------------------------------------------------------------- screen
 const screen = $('#screen'), sctx = screen.getContext('2d');
@@ -56,6 +66,11 @@ const img = sctx.createImageData(FB_W, FB_H);
 const pal32 = new Uint32Array(PALETTE.map(c => 0xff000000 | ((c & 255) << 16) | (c & 0xff00) | (c >> 16)));
 const img32 = new Uint32Array(img.data.buffer);
 
+function unrle(src) {
+  const out = new Uint8Array(FB_W * FB_H); let o = 0;
+  for (let i = 0; i < src.length; i++) { const b = src[i], n = (b >> 4) + 1, c = b & 15; out.fill(c, o, o + n); o += n; }
+  return out.subarray(0, o);
+}
 async function inflate(buf) {
   const ds = new DecompressionStream('deflate-raw');
   const stream = new Blob([buf]).stream().pipeThrough(ds);
@@ -65,7 +80,8 @@ let frameChain = Promise.resolve();
 function onFrame(buf) {
   const dv = new DataView(buf); const y0 = dv.getUint16(1, true), y1 = dv.getUint16(3, true);
   frameChain = frameChain.then(async () => {
-    const rows = await inflate(buf.slice(5));
+    const kind = new Uint8Array(buf, 0, 1)[0];
+    const rows = kind === 3 ? unrle(new Uint8Array(buf, 5)) : await inflate(buf.slice(5));
     fb.set(rows, y0 * FB_W);
     for (let i = y0 * FB_W, e = (y1 + 1) * FB_W; i < e; i++) img32[i] = pal32[fb[i] & 15];
     sctx.putImageData(img, 0, 0, 0, y0, FB_W, y1 - y0 + 1);
@@ -115,24 +131,103 @@ overlay.addEventListener('click', e => {
 });
 
 // ---------------------------------------------------------------- network
-function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
-function connect() {
+function send(m) { if (transport) transport.send(JSON.stringify(m)); }
+function incoming(data) {
+  if (typeof data === 'string') {
+    const m = JSON.parse(data);
+    if (m.t === 'status') onStatus(m);
+    else if (m.t === 'deny') flashDeny(m.msg);
+    else if (m.t === 'charset') { charset = Uint8Array.from(atob(m.b64), c => c.charCodeAt(0)); repaintAll(); }
+    return;
+  }
+  const kind = new Uint8Array(data, 0, 1)[0];
+  if (kind === 1 || kind === 3) onFrame(data);
+  else if (kind === 2 && audio) audio.feed(data);
+}
+function connectServer() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  ws = new WebSocket(`${proto}://${location.host}/ws?room=${encodeURIComponent(room)}&nick=${encodeURIComponent(nick)}`);
+  const ws = new WebSocket(`${proto}://${location.host}/ws?room=${encodeURIComponent(room)}&nick=${encodeURIComponent(nick)}`);
   ws.binaryType = 'arraybuffer';
+  transport = { send: (s) => { if (ws.readyState === 1) ws.send(s); } };
   ws.onopen = () => { if (audio) send({ t: 'audio', on: true }); };
-  ws.onmessage = (ev) => {
-    if (typeof ev.data === 'string') {
-      const m = JSON.parse(ev.data);
-      if (m.t === 'status') onStatus(m);
-      else if (m.t === 'deny') flashDeny(m.msg);
-      return;
-    }
-    const kind = new Uint8Array(ev.data, 0, 1)[0];
-    if (kind === 1) onFrame(ev.data);
-    else if (kind === 2 && audio) audio.feed(ev.data);
-  };
-  ws.onclose = () => { setText($('#roomInfo'), 'VERBINDUNG WEG...', 10); setTimeout(connect, 1500); };
+  ws.onmessage = (ev) => incoming(ev.data);
+  ws.onclose = () => { setText($('#roomInfo'), 'VERBINDUNG WEG...', 10); setTimeout(connectServer, 1500); };
+}
+
+// ---------------------------------------------------------------- serverless (GitHub Pages)
+function setupMsg(lines, fg = 14) {
+  const el = $('#setupText'); el.replaceChildren();
+  for (const l of [].concat(lines)) { const d = document.createElement('div'); if (l) d.append(textCanvas(l, fg)); else d.style.height = '10px'; el.append(d); }
+}
+function showSetup(on) { $('#setup').hidden = !on; }
+function pickDisk() {
+  return new Promise((resolve) => {
+    $('#setupDisk').hidden = false;
+    $('#diskFile').onchange = async (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      const err = checkDisk(bytes);
+      if (err) { setupMsg([err, '', 'BITTE ANDERE DATEI WAEHLEN'], 10); e.target.value = ''; return; }
+      await idbSet('disk', bytes);
+      e.target.blur(); $('#setupDisk').hidden = true;
+      resolve(bytes);
+    };
+  });
+}
+async function runHost() {
+  mode = 'host';
+  showSetup(true);
+  setupMsg(['KAISER ONLINE', '', 'BEREITE DEN C64 VOR...']);
+  let roms;
+  try { roms = await loadRoms((t) => setupMsg(['KAISER ONLINE', '', t])); }
+  catch (e) { setupMsg(['DIE C64-ROMS KONNTEN NICHT', 'GELADEN WERDEN.', '', 'INTERNET-VERBINDUNG PRUEFEN', 'UND SEITE NEU LADEN.'], 10); return; }
+  charset = roms.chargen; repaintAll();
+  let disk = await idbGet('disk');
+  if (!disk) {
+    setupMsg(['WILLKOMMEN BEI KAISER ONLINE!', '', 'DU BIST DER GASTGEBER: DAS SPIEL', 'LAEUFT IN DEINEM BROWSER.', '',
+      'BITTE WAEHLE DEINE KAISER-DISKETTE', '(DATEI .D64, ASS-VERSION).', 'SIE BLEIBT AUF DEINEM GERAET.']);
+    disk = await pickDisk();
+  }
+  disk = new Uint8Array(disk);
+  setupMsg(['LOAD"*",8,1', '', 'SEARCHING FOR *', 'LOADING']);
+  const state = await idbGet('state');
+  transport = await startHost({
+    nick, state, media: { ...roms, disk },
+    onMessage: (d) => { showSetup(false); incoming(d); },
+    onInfo: (i) => { peerInfo = i; renderPeerInfo(); },
+  });
+  document.querySelectorAll('.hostOnly').forEach(el => el.hidden = false);
+  $('#btnInvite').hidden = false;
+}
+async function runGuest() {
+  mode = 'guest';
+  showSetup(true);
+  setupMsg(['KAISER ONLINE', '', 'VERBINDE MIT DEM GASTGEBER...']);
+  try {
+    transport = await startGuest({
+      hostId, nick,
+      onMessage: (d) => { showSetup(false); incoming(d); },
+      onInfo: (i) => {
+        peerInfo = i; renderPeerInfo();
+        if (i.state === 'online' && audio) send({ t: 'audio', on: true });
+        if (i.state === 'hostOffline') { showSetup(true); setupMsg(['DER GASTGEBER IST NICHT ONLINE.', '', 'SEIN BROWSER-TAB MIT DEM SPIEL', 'MUSS GEOEFFNET SEIN.', '', 'ICH VERSUCHE ES WEITER...'], 15); }
+      },
+    });
+  } catch (e) { setupMsg(['KEINE VERBINDUNG ZUM', 'VERMITTLUNGSDIENST.'], 10); }
+}
+let peerInfo = null;
+function renderPeerInfo() {
+  const el = $('#netInfo'); if (!el || !peerInfo) return;
+  const t = { online: 'ONLINE', reconnecting: 'VERBINDE NEU...', connecting: 'VERBINDE...',
+    lost: 'VERBINDUNG WEG - VERBINDE NEU...', hostOffline: 'GASTGEBER OFFLINE', error: peerInfo.msg || 'FEHLER' }[peerInfo.state] || '';
+  setText(el, t, peerInfo.state === 'online' ? 13 : 10);
+  if (peerInfo.state === 'error') { showSetup(true); setupMsg([peerInfo.msg || 'FEHLER'], 10); }
+}
+function shareUrl() {
+  const base = `${location.origin}${location.pathname}`;
+  if (mode === 'host') return `${base}?join=${encodeURIComponent(transport.peerId)}`;
+  if (mode === 'guest') return `${base}?join=${encodeURIComponent(hostId)}`;
+  return `${base}?room=${encodeURIComponent(room)}`;
 }
 let denyTimer;
 function flashDeny(msg) {
@@ -145,7 +240,7 @@ let lastCtrlMine = false;
 function mySeats() { return Object.entries(status?.seats || {}).filter(([, n]) => n === nick).map(([i]) => +i); }
 function onStatus(s) {
   const prev = status; status = s; window.__kaiser = s;
-  setText($('#roomInfo'), `RAUM ${s.room.toUpperCase()}  ${s.users.length} DA${s.year ? '  JAHR ' + s.year : ''}`, 15);
+  setText($('#roomInfo'), `${mode === 'server' ? 'RAUM ' + s.room.toUpperCase() + '  ' : ''}${s.users.length} DA${s.year ? '  JAHR ' + s.year : ''}`, 15);
   renderPlayers();
   // number entry box
   const nb = $('#numBox');
@@ -272,7 +367,7 @@ $('#btnKbd').onclick = () => { $('#kbd').hidden = !$('#kbd').hidden; $('#btnKbd'
 const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 let lastTap = 0;
 window.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.matches('input:not([type]), input[type=text], textarea')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   audioUnlock();
   const mode = status?.mode;
@@ -317,9 +412,33 @@ document.querySelectorAll('.speed').forEach(b => b.onclick = () => send({ t: 'sp
 $('#btnReset').onclick = () => {
   if (confirm('Den C64 wirklich neu starten? Das laufende Spiel geht verloren (außer es wurde mit F1 auf Diskette gespeichert).')) send({ t: 'reset', confirm: 'NEUSTART' });
 };
+$('#btnInvite').onclick = async () => {
+  const url = shareUrl();
+  try { await navigator.clipboard.writeText(url); setText($('#btnInvite'), 'LINK KOPIERT!', 13); setTimeout(() => setText($('#btnInvite'), 'MITSPIELER EINLADEN', 1), 2500); }
+  catch { prompt('Diesen Link an deine Mitspieler schicken:', url); }
+};
 $('#btnShare').onclick = async () => {
-  const url = `${location.origin}${location.pathname}?room=${encodeURIComponent(room)}`;
+  const url = shareUrl();
   try { await navigator.clipboard.writeText(url); setText($('#shareOk'), 'KOPIERT!', 13); } catch { prompt('Link für deine Freunde:', url); }
+};
+
+$('#btnExport').onclick = async () => {
+  if (mode !== 'host') return;
+  const st = await transport.exportState();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(st)], { type: 'application/json' }));
+  a.download = `kaiser-spielstand-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`; a.click();
+};
+$('#btnImport').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f || mode !== 'host') return;
+  try { const st = JSON.parse(await f.text()); if (!st.machine) throw 0; if (confirm('Laufendes Spiel durch diesen Spielstand ersetzen?')) transport.importState(st); }
+  catch { alert('Das ist keine Kaiser-Spielstand-Datei.'); }
+  e.target.value = '';
+};
+$('#btnDisk').onclick = async () => {
+  if (!confirm('Andere Diskette wählen? Die Seite wird danach neu geladen.')) return;
+  await idbSet('disk', null); location.reload();
 };
 
 // ---------------------------------------------------------------- audio (SID)
@@ -334,7 +453,7 @@ let wantSound = localStorage.getItem('kaiser.sound') !== '0';
 async function startAudio() {
   if (audio) return;
   const ctx = new AudioContext();
-  await ctx.audioWorklet.addModule('sid-worklet.js');
+  await ctx.audioWorklet.addModule(new URL('sid-worklet.js', import.meta.url));
   const node = new AudioWorkletNode(ctx, 'sid', { outputChannelCount: [1] });
   node.connect(ctx.destination);
   audio = {
@@ -353,12 +472,16 @@ $('#btnSound').onclick = () => {
 
 // ---------------------------------------------------------------- boot
 (async function init() {
-  try { charset = new Uint8Array(await (await fetch('charset.bin')).arrayBuffer()); } catch { }
+  // Is there a Kaiser server behind this page? Otherwise (GitHub Pages) we play peer-to-peer.
+  const health = await fetch('health', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').catch(() => '');
+  if (health === 'ok' && !hostId) mode = 'server';
+  else mode = hostId ? 'guest' : 'host';
+  if (mode === 'server') { try { charset = new Uint8Array(await (await fetch('charset.bin')).arrayBuffer()); } catch { } }
   paintStatic(); buildNumPad(); buildKbd();
   if (!nick) {
     nick = (prompt('Wie heißt du? (Name für die Mitspieler)') || '').trim().slice(0, 20) || 'Spieler' + Math.floor(Math.random() * 100);
     localStorage.setItem('kaiser.nick', nick);
   }
-  connect();
+  if (mode === 'server') connectServer(); else if (mode === 'host') runHost(); else runGuest();
   document.addEventListener('pointerdown', audioUnlock, { once: true });
 })();
