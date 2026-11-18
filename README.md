@@ -20,7 +20,7 @@ C64, wie früher am Brotkasten, nur übers Internet.
   - Tastatur: Pfeiltasten = Joystick, Leertaste/Enter = Feuer, Buchstaben für Namen, F1 = Spielstand auf Diskette
 - **Mehrspieler (Hotseat online)**: Jeder klickt bei seinem Herrscher auf „Das bin ich“. Dann kann nur
   steuern, wer laut Programm gerade dran ist. Dafür werden die BASIC-Variablen des laufenden
-  Originals (`C` = aktueller Spieler, im Gefecht `I`/`H` für Angreifer und Verteidiger).
+  Originals gelesen (`C` = aktueller Spieler, im Gefecht `I`/`H` für Angreifer und Verteidiger).
 - **Zeitfaktor des Originals bleibt erhalten** (ein Zug über ca. 1:20 min kostet Lebensjahre). Ist der Spieler am
   Zug offline, hält der C64 an, bis er wiederkommt (abschaltbar im Menü).
 - „Du bist dran“ als Signalton und Browser-Benachrichtigung (im Server-Modus auch per Telegram)
